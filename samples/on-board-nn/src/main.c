@@ -6,13 +6,6 @@
 
 #define NUM_TESTS 10
 
-// override the default debug log in the tensorflow lite micro library
-/* void DebugLog(const char* s) { */
-/*   if (s && strlen(s) > 2) { */
-/*     printk("zephyr: %s", s); */
-/*   } */
-/* } */
-
 void classify(void)
 {
     int64_t start = k_uptime_get();
