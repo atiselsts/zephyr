@@ -1,5 +1,5 @@
 extern "C" {
-#include <zephyr.h>
+//#include 
 
 #include "exported-nn.c"
 }
@@ -19,16 +19,15 @@ const int kInferencesPerCycle = 1000;
 
 
 #include "tensorflow/lite/micro/all_ops_resolver.h"
+// #include "tensorflow/lite/micro/examples/hello_world/constants.h"
+// #include "tensorflow/lite/micro/examples/hello_world/model.h"
+// #include "tensorflow/lite/micro/examples/hello_world/output_handler.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
 // void operator delete(void*) {
-//   /* no-op */
-// }
-
-// void operator delete(void*, unsigned int) {
 //   /* no-op */
 // }
 
@@ -53,11 +52,11 @@ uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
 // The name of this function is important for Arduino compatibility.
-void setup()
-{
-  printk("nn: setup\n");
-  printk("sizeof(TfLiteTensor)=%u %u sizeof(void*)=%u\n",
-          sizeof(TfLiteTensor), alignof(TfLiteTensor), sizeof(input->dims));
+void setup() {
+//  printf("nn: setup\n");
+
+  // printf("sizeof(TfLiteTensor)=%u %u sizeof(void*)=%u\n",
+  //     sizeof(TfLiteTensor), alignof(TfLiteTensor), sizeof(input->dims));
 
   // Set up logging. Google style is to avoid globals or statics because of
   // lifetime uncertainty, but since this has a trivial destructor it's okay.
@@ -67,10 +66,10 @@ void setup()
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  // model = tflite::GetModel(g_model);
-  // model = tflite::GetModel(feature_nn_tflite);
+//  model = tflite::GetModel(g_model);
+//  model = tflite::GetModel(feature_nn_tflite);
   model = tflite::GetModel(cnn_quant_int_tflite);
-  // model = tflite::GetModel(test_cnn);
+//  model = tflite::GetModel(test_cnn);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
@@ -80,9 +79,9 @@ void setup()
   }
 
   TF_LITE_REPORT_ERROR(error_reporter,
-          "Model provided is schema version %d,"
-          "supported version %d.",
-          model->version(), TFLITE_SCHEMA_VERSION);
+      "Model provided is schema version %d,"
+      "supported version %d.",
+      model->version(), TFLITE_SCHEMA_VERSION);
 
   // This pulls in all the operation implementations we need.
   // NOLINTNEXTLINE(runtime-global-variables)
@@ -93,9 +92,11 @@ void setup()
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
+//  printf("alloc tensors\n");
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
+    printf("AllocateTensors() failed\n");
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
@@ -137,7 +138,7 @@ void setup()
 //      (input->dims->data[2] != kChannelNumber) || */
 
 
-  // Keep track of how many inferences we have performed.
+// Keep track of how many inferences we have performed.
   inference_count = 0;
 }
 
@@ -186,7 +187,7 @@ int loop()
 
   int i;
   for (i = 0; i < 3 * 256; ++i) {
-    input->data.int8[i] = 1;
+    input->data.int8[i] = raw_data[i];
   }
 
   // Run inference, and report any error
@@ -196,18 +197,18 @@ int loop()
     return -1;
   }
 
-  // TF_LITE_REPORT_ERROR(error_reporter, "output\n");
+//  TF_LITE_REPORT_ERROR(error_reporter, "output\n");
   int best_class = 0;
   for (i = 1; i < NUM_CLASSES; ++i) {
-      // TF_LITE_REPORT_ERROR(error_reporter, "  out[%d]=%f\n", i,  output->data.f[i]);
-      // TF_LITE_REPORT_ERROR(error_reporter, "  out[%d]=%d\n", i,  output->data.int8[i]);
+//    TF_LITE_REPORT_ERROR(error_reporter, "  out[%d]=%f\n", i,  output->data.f[i]);
+//    TF_LITE_REPORT_ERROR(error_reporter, "  out[%d]=%d\n", i,  output->data.int8[i]);
     if (output->data.int8[i] > output->data.int8[best_class]) {
       best_class = i;
     }
-    // result += output->data.int8[i];
+//    result += output->data.int8[i];
   }
 
-  // inference_count++;
+//  inference_count++;
   return best_class;
 }
 
