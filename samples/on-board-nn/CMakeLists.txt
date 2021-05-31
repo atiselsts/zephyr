@@ -11,11 +11,12 @@ zephyr_include_directories($ENV{TENSORFLOW}/tensorflow/lite/micro/tools/make/dow
 target_compile_options(app PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-threadsafe-statics -fno-use-cxa-atexit>)
 
 add_library(libtensorflow STATIC IMPORTED GLOBAL)
-set_target_properties(libtensorflow PROPERTIES IMPORTED_LOCATION $ENV{ZEPHYR_BASE}/samples/on-board-nn/libtensorflow-microlite-m3.a)
-#set_target_properties(libtensorflow PROPERTIES IMPORTED_LOCATION $ENV{ZEPHYR_BASE}/samples/on-board-nn/libtensorflow-microlite-m4.a)
+#set_target_properties(libtensorflow PROPERTIES IMPORTED_LOCATION $ENV{ZEPHYR_BASE}/samples/on-board-nn/libtensorflow-microlite-m3.a)
+set_target_properties(libtensorflow PROPERTIES IMPORTED_LOCATION $ENV{ZEPHYR_BASE}/samples/on-board-nn/libtensorflow-microlite-m4.a)
 #set_target_properties(libtensorflow PROPERTIES IMPORTED_LOCATION $ENV{ZEPHYR_BASE}/samples/on-board-nn/libtensorflow-microlite-m7.a)
 #set_target_properties(libtensorflow PROPERTIES IMPORTED_LOCATION $ENV{ZEPHYR_BASE}/samples/on-board-nn/libtensorflow-microlite-m33.a)
 target_link_libraries(app PUBLIC libtensorflow)
 
 target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/raw-data.c)
 target_sources(app PRIVATE src/nn.cpp)

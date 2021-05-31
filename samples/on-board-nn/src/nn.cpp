@@ -8,6 +8,8 @@ extern "C" {
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
+#include "nn.h"
+
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
 tflite::ErrorReporter* error_reporter = nullptr;
@@ -36,7 +38,7 @@ void setup() {
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(cnn_quant_int_tflite);
+  model = tflite::GetModel(cnn_quant_int_500_256_tflite);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
@@ -71,7 +73,7 @@ void setup() {
 int loop()
 {
   int i;
-  for (i = 0; i < 3 * 256; ++i) {
+  for (i = 0; i < 3 * WINDOW_SIZE; ++i) {
     input->data.int8[i] = raw_data[i];
   }
 
