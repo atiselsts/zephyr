@@ -17,17 +17,12 @@
  * running one and corrupting it. YMMV.
  */
 
-static chunkid_t max_chunkid(struct z_heap *h)
-{
-	return h->end_chunk - min_chunk_size(h);
-}
-
 #define VALIDATE(cond) do { if (!(cond)) { return false; } } while (0)
 
 static bool in_bounds(struct z_heap *h, chunkid_t c)
 {
 	VALIDATE(c >= right_chunk(h, 0));
-	VALIDATE(c <= max_chunkid(h));
+	VALIDATE(c < h->end_chunk);
 	VALIDATE(chunk_size(h, c) < h->end_chunk);
 	return true;
 }
@@ -80,7 +75,7 @@ bool sys_heap_validate(struct sys_heap *heap)
 	/*
 	 * Walk through the chunks linearly, verifying sizes and end pointer.
 	 */
-	for (c = right_chunk(h, 0); c <= max_chunkid(h); c = right_chunk(h, c)) {
+	for (c = right_chunk(h, 0); c < h->end_chunk; c = right_chunk(h, c)) {
 		if (!valid_chunk(h, c)) {
 			return false;
 		}
@@ -126,7 +121,7 @@ bool sys_heap_validate(struct sys_heap *heap)
 	 * USED.
 	 */
 	chunkid_t prev_chunk = 0;
-	for (c = right_chunk(h, 0); c <= max_chunkid(h); c = right_chunk(h, c)) {
+	for (c = right_chunk(h, 0); c < h->end_chunk; c = right_chunk(h, c)) {
 		if (!chunk_used(h, c) && !solo_free_header(h, c)) {
 			return false;
 		}
@@ -164,7 +159,7 @@ bool sys_heap_validate(struct sys_heap *heap)
 	/* Now we are valid, but have managed to invert all the in-use
 	 * fields.  One more linear pass to fix them up
 	 */
-	for (c = right_chunk(h, 0); c <= max_chunkid(h); c = right_chunk(h, c)) {
+	for (c = right_chunk(h, 0); c < h->end_chunk; c = right_chunk(h, c)) {
 		set_chunk_used(h, c, !chunk_used(h, c));
 	}
 	return true;
@@ -207,33 +202,34 @@ static bool rand_alloc_choice(struct z_heap_stress_rec *sr)
 		return true;
 	} else if (sr->blocks_alloced >= sr->nblocks) {
 		return false;
+	} else {
+
+		/* The way this works is to scale the chance of choosing to
+		 * allocate vs. free such that it's even odds when the heap is
+		 * at the target percent, with linear tapering on the low
+		 * slope (i.e. we choose to always allocate with an empty
+		 * heap, allocate 50% of the time when the heap is exactly at
+		 * the target, and always free when above the target).  In
+		 * practice, the operations aren't quite symmetric (you can
+		 * always free, but your allocation might fail), and the units
+		 * aren't matched (we're doing math based on bytes allocated
+		 * and ignoring the overhead) but this is close enough.  And
+		 * yes, the math here is coarse (in units of percent), but
+		 * that's good enough and fits well inside 32 bit quantities.
+		 * (Note precision issue when heap size is above 40MB
+		 * though!).
+		 */
+		__ASSERT(sr->total_bytes < 0xffffffffU / 100, "too big for u32!");
+		uint32_t full_pct = (100 * sr->bytes_alloced) / sr->total_bytes;
+		uint32_t target = sr->target_percent ? sr->target_percent : 1;
+		uint32_t free_chance = 0xffffffffU;
+
+		if (full_pct < sr->target_percent) {
+			free_chance = full_pct * (0x80000000U / target);
+		}
+
+		return rand32() > free_chance;
 	}
-
-	/* The way this works is to scale the chance of choosing to
-	 * allocate vs. free such that it's even odds when the heap is
-	 * at the target percent, with linear tapering on the low
-	 * slope (i.e. we choose to always allocate with an empty
-	 * heap, allocate 50% of the time when the heap is exactly at
-	 * the target, and always free when above the target).  In
-	 * practice, the operations aren't quite symmetric (you can
-	 * always free, but your allocation might fail), and the units
-	 * aren't matched (we're doing math based on bytes allocated
-	 * and ignoring the overhead) but this is close enough.  And
-	 * yes, the math here is coarse (in units of percent), but
-	 * that's good enough and fits well inside 32 bit quantities.
-	 * (Note precision issue when heap size is above 40MB
-	 * though!).
-	 */
-	__ASSERT(sr->total_bytes < 0xffffffffU / 100, "too big for u32!");
-	uint32_t full_pct = (100 * sr->bytes_alloced) / sr->total_bytes;
-	uint32_t target = sr->target_percent ? sr->target_percent : 1;
-	uint32_t free_chance = 0xffffffffU;
-
-	if (full_pct < sr->target_percent) {
-		free_chance = full_pct * (0x80000000U / target);
-	}
-
-	return rand32() > free_chance;
 }
 
 /* Chooses a size of block to allocate, logarithmically favoring

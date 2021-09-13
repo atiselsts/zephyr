@@ -12,9 +12,11 @@
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/iso.h>
 #include <bluetooth/buf.h>
+#include <bluetooth/direction.h>
 
 #include "hci_core.h"
 #include "conn_internal.h"
+#include "direction_internal.h"
 #include "id.h"
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_CORE)
@@ -110,7 +112,7 @@ static int bt_le_scan_set_enable_legacy(uint8_t enable)
 int bt_le_scan_set_enable(uint8_t enable)
 {
 	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
-	    BT_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
+	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
 		return set_le_ext_scan_enable(enable, 0);
 	}
 
@@ -255,7 +257,7 @@ static int start_passive_scan(bool fast_scan)
 	}
 
 	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
-	    BT_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
+	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
 		struct bt_hci_ext_scan_phy scan;
 
 		scan.type = BT_HCI_LE_SCAN_PASSIVE;
@@ -312,37 +314,6 @@ int bt_le_scan_update(bool fast_scan)
 #endif
 
 	return 0;
-}
-
-void bt_data_parse(struct net_buf_simple *ad,
-		   bool (*func)(struct bt_data *data, void *user_data),
-		   void *user_data)
-{
-	while (ad->len > 1) {
-		struct bt_data data;
-		uint8_t len;
-
-		len = net_buf_simple_pull_u8(ad);
-		if (len == 0U) {
-			/* Early termination */
-			return;
-		}
-
-		if (len > ad->len) {
-			BT_WARN("Malformed data");
-			return;
-		}
-
-		data.type = net_buf_simple_pull_u8(ad);
-		data.data_len = len - 1;
-		data.data = ad->data;
-
-		if (!func(&data, user_data)) {
-			return;
-		}
-
-		net_buf_simple_pull(ad, len - 1);
-	}
 }
 
 #if defined(CONFIG_BT_CENTRAL)
@@ -611,7 +582,7 @@ static struct bt_le_per_adv_sync *get_pending_per_adv_sync(void)
 	return NULL;
 }
 
-static struct bt_le_per_adv_sync *get_per_adv_sync(uint16_t handle)
+struct bt_le_per_adv_sync *bt_hci_get_per_adv_sync(uint16_t handle)
 {
 	for (int i = 0; i < ARRAY_SIZE(per_adv_sync_pool); i++) {
 		if (per_adv_sync_pool[i].handle == handle &&
@@ -639,7 +610,7 @@ void bt_hci_le_per_adv_report(struct net_buf *buf)
 
 	evt = net_buf_pull_mem(buf, sizeof(*evt));
 
-	per_adv_sync = get_per_adv_sync(sys_le16_to_cpu(evt->handle));
+	per_adv_sync = bt_hci_get_per_adv_sync(sys_le16_to_cpu(evt->handle));
 
 	if (!per_adv_sync) {
 		BT_ERR("Unknown handle 0x%04X for periodic advertising report",
@@ -655,7 +626,7 @@ void bt_hci_le_per_adv_report(struct net_buf *buf)
 
 	info.tx_power = evt->tx_power;
 	info.rssi = evt->rssi;
-	info.cte_type = evt->cte_type;
+	info.cte_type = BIT(evt->cte_type);
 	info.addr = &per_adv_sync->addr;
 
 	SYS_SLIST_FOR_EACH_CONTAINER(&pa_sync_cbs, listener, node) {
@@ -786,7 +757,7 @@ void bt_hci_le_per_adv_sync_lost(struct net_buf *buf)
 	struct bt_le_per_adv_sync *per_adv_sync;
 	struct bt_le_per_adv_sync_cb *listener;
 
-	per_adv_sync = get_per_adv_sync(sys_le16_to_cpu(evt->handle));
+	per_adv_sync = bt_hci_get_per_adv_sync(sys_le16_to_cpu(evt->handle));
 
 	if (!per_adv_sync) {
 		BT_ERR("Unknown handle 0x%04Xfor periodic adv sync lost",
@@ -874,7 +845,7 @@ void bt_hci_le_biginfo_adv_report(struct net_buf *buf)
 
 	evt = net_buf_pull_mem(buf, sizeof(*evt));
 
-	per_adv_sync = get_per_adv_sync(sys_le16_to_cpu(evt->sync_handle));
+	per_adv_sync = bt_hci_get_per_adv_sync(sys_le16_to_cpu(evt->sync_handle));
 
 	if (!per_adv_sync) {
 		BT_ERR("Unknown handle 0x%04X for periodic advertising report",
@@ -904,6 +875,22 @@ void bt_hci_le_biginfo_adv_report(struct net_buf *buf)
 	}
 }
 #endif /* defined(CONFIG_BT_ISO_BROADCAST) */
+#if defined(CONFIG_BT_DF_CONNECTIONLESS_CTE_RX)
+void bt_hci_le_df_connectionless_iq_report(struct net_buf *buf)
+{
+	struct bt_df_per_adv_sync_iq_samples_report cte_report;
+	struct bt_le_per_adv_sync *per_adv_sync;
+	struct bt_le_per_adv_sync_cb *listener;
+
+	hci_df_prepare_connectionless_iq_report(buf, &cte_report, &per_adv_sync);
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&pa_sync_cbs, listener, node) {
+		if (listener->cte_report_cb) {
+			listener->cte_report_cb(per_adv_sync, &cte_report);
+		}
+	}
+}
+#endif /* CONFIG_BT_DF_CONNECTIONLESS_CTE_RX */
 #endif /* defined(CONFIG_BT_PER_ADV_SYNC) */
 #endif /* defined(CONFIG_BT_EXT_ADV) */
 
@@ -1008,7 +995,7 @@ int bt_le_scan_start(const struct bt_le_scan_param *param, bt_le_scan_cb_t cb)
 #endif /* defined(CONFIG_BT_WHITELIST) */
 
 	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
-	    BT_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
+	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
 		struct bt_hci_ext_scan_phy param_1m;
 		struct bt_hci_ext_scan_phy param_coded;
 

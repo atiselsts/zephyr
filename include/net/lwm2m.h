@@ -65,6 +65,7 @@
 /* clang-format on */
 
 typedef void (*lwm2m_socket_fault_cb_t)(int error);
+typedef void (*lwm2m_notify_timeout_cb_t)(void);
 
 /**
  * @brief LwM2M context structure to maintain information for a single
@@ -77,8 +78,8 @@ struct lwm2m_ctx {
 	/** Private CoAP and networking structures */
 	struct coap_pending pendings[CONFIG_LWM2M_ENGINE_MAX_PENDING];
 	struct coap_reply replies[CONFIG_LWM2M_ENGINE_MAX_REPLIES];
-	struct k_work_delayable retransmit_work;
-	struct sys_mutex send_lock;
+	sys_slist_t pending_sends;
+	sys_slist_t observer;
 
 	/** A pointer to currently processed request, for internal LwM2M engine
 	 *  use. The underlying type is ``struct lwm2m_message``, but since it's
@@ -124,6 +125,11 @@ struct lwm2m_ctx {
 	 *  callback in case of socket errors on receive.
 	 */
 	lwm2m_socket_fault_cb_t fault_cb;
+
+	/** Notify Timeout Callback. LwM2M processing thread will call this
+	 *  callback in case of notify timeout.
+	 */
+	lwm2m_notify_timeout_cb_t notify_timeout_cb;
 
 	/** Validation buffer. Used as a temporary buffer to decode the resource
 	 *  value before validation. On successful validation, its content is
@@ -440,6 +446,17 @@ int lwm2m_engine_update_observer_max_period(char *pathstr, uint32_t period_s);
  * @return 0 for success or negative in case of error.
  */
 int lwm2m_engine_create_obj_inst(char *pathstr);
+
+/**
+ * @brief Delete an LwM2M object instance.
+ *
+ * LwM2M clients use this function to delete LwM2M objects.
+ *
+ * @param[in] pathstr LwM2M path string "obj/obj-inst"
+ *
+ * @return 0 for success or negative in case of error.
+ */
+int lwm2m_engine_delete_obj_inst(char *pathstr);
 
 /**
  * @brief Set resource (instance) value (opaque buffer)
@@ -1014,6 +1031,11 @@ void lwm2m_rd_client_start(struct lwm2m_ctx *client_ctx, const char *ep_name,
  */
 void lwm2m_rd_client_stop(struct lwm2m_ctx *client_ctx,
 			  lwm2m_ctx_event_cb_t event_cb);
+
+/**
+ * @brief Trigger a Registration Update of the LwM2M RD Client
+ */
+void lwm2m_rd_client_update(void);
 
 #endif	/* ZEPHYR_INCLUDE_NET_LWM2M_H_ */
 /**@}  */

@@ -21,19 +21,23 @@
 #include <arch/common/ffs.h>
 #include <arch/arc/thread.h>
 #include <arch/common/sys_bitops.h>
-#ifdef CONFIG_ISA_ARCV2
+#include "sys-io-common.h"
+
 #include <arch/arc/v2/exc.h>
 #include <arch/arc/v2/irq.h>
-#include <arch/arc/v2/error.h>
 #include <arch/arc/v2/misc.h>
 #include <arch/arc/v2/aux_regs.h>
 #include <arch/arc/v2/arcv2_irq_unit.h>
 #include <arch/arc/v2/asm_inline.h>
-#include <arch/common/addr_types.h>
-#include "v2/sys_io.h"
+#include <arch/arc/arc_addr_types.h>
+#include <arch/arc/v2/error.h>
+
 #ifdef CONFIG_ARC_CONNECT
 #include <arch/arc/v2/arc_connect.h>
 #endif
+
+#ifdef CONFIG_ISA_ARCV2
+#include "v2/sys_io.h"
 #ifdef CONFIG_ARC_HAS_SECURE
 #include <arch/arc/v2/secureshield/arc_secure.h>
 #endif
@@ -45,7 +49,11 @@
 extern "C" {
 #endif
 
+#ifdef CONFIG_64BIT
+#define ARCH_STACK_PTR_ALIGN	8
+#else
 #define ARCH_STACK_PTR_ALIGN	4
+#endif /* CONFIG_64BIT */
 
 /* Indicate, for a minimally sized MPU region, how large it must be and what
  * its base address must be aligned to.
@@ -58,7 +66,7 @@ extern "C" {
 #ifdef CONFIG_ARC_CORE_MPU
 #if CONFIG_ARC_MPU_VER == 2
 #define Z_ARC_MPU_ALIGN	2048
-#elif CONFIG_ARC_MPU_VER == 4
+#elif (CONFIG_ARC_MPU_VER == 3) || (CONFIG_ARC_MPU_VER == 4) || (CONFIG_ARC_MPU_VER == 6)
 #define Z_ARC_MPU_ALIGN	32
 #else
 #error "Unsupported MPU version"

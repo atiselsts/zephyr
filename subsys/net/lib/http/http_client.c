@@ -32,7 +32,7 @@ LOG_MODULE_REGISTER(net_http, CONFIG_NET_HTTP_LOG_LEVEL);
 static ssize_t sendall(int sock, const void *buf, size_t len)
 {
 	while (len) {
-		ssize_t out_len = send(sock, buf, len, 0);
+		ssize_t out_len = zsock_send(sock, buf, len, 0);
 
 		if (out_len < 0) {
 			return -errno;
@@ -169,6 +169,8 @@ static int on_status(struct http_parser *parser, const char *at, size_t length)
 	len = MIN(length, sizeof(req->internal.response.http_status) - 1);
 	memcpy(req->internal.response.http_status, at, len);
 	req->internal.response.http_status[len] = 0;
+	req->internal.response.http_status_code =
+		(uint16_t)parser->status_code;
 
 	NET_DBG("HTTP response status %d %s", parser->status_code,
 		log_strdup(req->internal.response.http_status));
@@ -176,8 +178,6 @@ static int on_status(struct http_parser *parser, const char *at, size_t length)
 	if (req->internal.response.http_cb &&
 	    req->internal.response.http_cb->on_status) {
 		req->internal.response.http_cb->on_status(parser, at, length);
-		req->internal.response.http_status_code =
-			(uint16_t)parser->status_code;
 	}
 
 	return 0;
@@ -415,7 +415,7 @@ static int http_wait_data(int sock, struct http_request *req)
 	int received, ret;
 
 	do {
-		received = recv(sock, req->internal.response.recv_buf + offset,
+		received = zsock_recv(sock, req->internal.response.recv_buf + offset,
 				req->internal.response.recv_buf_len - offset,
 				0);
 		if (received == 0) {
@@ -460,7 +460,7 @@ static void http_timeout(struct k_work *work)
 	struct http_client_internal_data *data =
 		CONTAINER_OF(work, struct http_client_internal_data, work);
 
-	(void)close(data->sock);
+	(void)zsock_close(data->sock);
 }
 
 int http_client_req(int sock, struct http_request *req,

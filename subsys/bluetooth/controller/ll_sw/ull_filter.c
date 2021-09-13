@@ -26,6 +26,7 @@
 #include "lll_adv.h"
 #include "lll/lll_adv_pdu.h"
 #include "lll_scan.h"
+#include "lll/lll_df_types.h"
 #include "lll_conn.h"
 #include "lll_filter.h"
 
@@ -108,7 +109,7 @@ static struct lll_filter rl_filter;
 static uint32_t rpa_timeout_ms;
 static int64_t rpa_last_ms;
 
-static struct k_delayed_work rpa_work;
+static struct k_work_delayable rpa_work;
 
 #define LIST_MATCH(list, i, type, addr) (list[i].taken && \
 		    (list[i].id_addr_type == (type & 0x1)) && \
@@ -651,13 +652,13 @@ void ull_filter_reset(bool init)
 	prpa_cache_clear();
 #endif
 	if (init) {
-		k_delayed_work_init(&rpa_work, rpa_timeout);
+		k_work_init_delayable(&rpa_work, rpa_timeout);
 #if defined(CONFIG_BT_CTLR_SW_DEFERRED_PRIVACY)
 		k_work_init(&(resolve_work.prpa_work), prpa_cache_resolve);
 		k_work_init(&(t_work.target_work), target_resolve);
 #endif
 	} else {
-		k_delayed_work_cancel(&rpa_work);
+		k_work_cancel_delayable(&rpa_work);
 	}
 #else
 	filter_clear(&wl_filter);
@@ -1020,18 +1021,18 @@ static int rl_access_check(bool check_ar)
 static void rpa_timeout(struct k_work *work)
 {
 	ull_filter_rpa_update(true);
-	k_delayed_work_submit(&rpa_work, K_MSEC(rpa_timeout_ms));
+	k_work_schedule(&rpa_work, K_MSEC(rpa_timeout_ms));
 }
 
 static void rpa_refresh_start(void)
 {
 	BT_DBG("");
-	k_delayed_work_submit(&rpa_work, K_MSEC(rpa_timeout_ms));
+	k_work_schedule(&rpa_work, K_MSEC(rpa_timeout_ms));
 }
 
 static void rpa_refresh_stop(void)
 {
-	k_delayed_work_cancel(&rpa_work);
+	k_work_cancel_delayable(&rpa_work);
 }
 
 #else /* !CONFIG_BT_CTLR_PRIVACY */
@@ -1102,12 +1103,13 @@ static void conn_rpa_update(uint8_t rl_idx)
 	for (handle = 0U; handle < CONFIG_BT_MAX_CONN; handle++) {
 		struct ll_conn *conn = ll_connected_get(handle);
 
-		/* The RPA of the connection matches the RPA that was just resolved */
-		if (conn &&
-		    conn->peer_addr_type < 2U &&
-		    !memcmp(conn->peer_addr, rl[rl_idx].curr_rpa.val, BDADDR_SIZE)) {
-			memcpy(conn->peer_addr, rl[rl_idx].id_addr.val, BDADDR_SIZE);
-			conn->peer_addr_type += 2U;
+		/* The RPA of the connection matches the RPA that was just
+		 * resolved
+		 */
+		if (conn && !memcmp(conn->peer_id_addr, rl[rl_idx].curr_rpa.val,
+				    BDADDR_SIZE)) {
+			(void)memcpy(conn->peer_id_addr, rl[rl_idx].id_addr.val,
+				     BDADDR_SIZE);
 			break;
 		}
 	}
@@ -1149,8 +1151,8 @@ static void target_resolve(struct k_work *work)
 	if (twork->cb) {
 		mfy.fp = twork->cb;
 		mfy.param = (void *) ((unsigned int) j);
-		mayfly_enqueue(TICKER_USER_ID_THREAD,
-			       TICKER_USER_ID_LLL, 1, &mfy);
+		(void)mayfly_enqueue(TICKER_USER_ID_THREAD,
+				     TICKER_USER_ID_LLL, 1, &mfy);
 	}
 }
 
@@ -1219,8 +1221,8 @@ static void prpa_cache_resolve(struct k_work *work)
 	if (rwork->cb) {
 		mfy.fp = rwork->cb;
 		mfy.param = (void *) ((unsigned int) j);
-		mayfly_enqueue(TICKER_USER_ID_THREAD,
-			       TICKER_USER_ID_LLL, 1, &mfy);
+		(void)mayfly_enqueue(TICKER_USER_ID_THREAD,
+				     TICKER_USER_ID_LLL, 1, &mfy);
 	}
 }
 

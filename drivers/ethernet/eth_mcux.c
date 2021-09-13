@@ -185,8 +185,7 @@ static void eth_mcux_phy_enter_reset(struct eth_context *context);
 void eth_mcux_phy_stop(struct eth_context *context);
 
 static int eth_mcux_device_pm_control(const struct device *dev,
-				      uint32_t command,
-				      void *context, device_pm_cb cb, void *arg)
+				      enum pm_device_action action)
 {
 	struct eth_context *eth_ctx = (struct eth_context *)dev->data;
 	int ret = 0;
@@ -198,38 +197,37 @@ static int eth_mcux_device_pm_control(const struct device *dev,
 		goto out;
 	}
 
-	if (command == DEVICE_PM_SET_POWER_STATE) {
-		if (*(uint32_t *)context == DEVICE_PM_SUSPEND_STATE) {
-			LOG_DBG("Suspending");
+	switch (action) {
+	case PM_DEVICE_ACTION_SUSPEND:
+		LOG_DBG("Suspending");
 
-			ret = net_if_suspend(eth_ctx->iface);
-			if (ret == -EBUSY) {
-				goto out;
-			}
-
-			eth_mcux_phy_enter_reset(eth_ctx);
-			eth_mcux_phy_stop(eth_ctx);
-
-			ENET_Reset(eth_ctx->base);
-			ENET_Deinit(eth_ctx->base);
-			clock_control_off(eth_ctx->clock_dev,
-				(clock_control_subsys_t)eth_ctx->clock);
-		} else if (*(uint32_t *)context == DEVICE_PM_ACTIVE_STATE) {
-			LOG_DBG("Resuming");
-
-			clock_control_on(eth_ctx->clock_dev,
-				(clock_control_subsys_t)eth_ctx->clock);
-			eth_mcux_init(dev);
-			net_if_resume(eth_ctx->iface);
+		ret = net_if_suspend(eth_ctx->iface);
+		if (ret == -EBUSY) {
+			goto out;
 		}
-	} else {
-		return -EINVAL;
+
+		eth_mcux_phy_enter_reset(eth_ctx);
+		eth_mcux_phy_stop(eth_ctx);
+
+		ENET_Reset(eth_ctx->base);
+		ENET_Deinit(eth_ctx->base);
+		clock_control_off(eth_ctx->clock_dev,
+			(clock_control_subsys_t)eth_ctx->clock);
+		break;
+	case PM_DEVICE_ACTION_RESUME:
+		LOG_DBG("Resuming");
+
+		clock_control_on(eth_ctx->clock_dev,
+			(clock_control_subsys_t)eth_ctx->clock);
+		eth_mcux_init(dev);
+		net_if_resume(eth_ctx->iface);
+		break;
+	default:
+		ret = -ENOTSUP;
+		break;
 	}
 
 out:
-	if (cb) {
-		cb(dev, ret, context, arg);
-	}
 
 	return ret;
 }
@@ -237,7 +235,7 @@ out:
 #define ETH_MCUX_PM_FUNC eth_mcux_device_pm_control
 
 #else
-#define ETH_MCUX_PM_FUNC device_pm_control_nop
+#define ETH_MCUX_PM_FUNC NULL
 #endif /* CONFIG_NET_POWER_MANAGEMENT */
 
 #if ETH_MCUX_FIXED_LINK
@@ -833,7 +831,7 @@ error:
 	eth_stats_update_errors_rx(get_iface(context, vlan_tag));
 }
 
-#if defined(CONFIG_PTP_CLOCK_MCUX)
+#if defined(CONFIG_PTP_CLOCK_MCUX) && defined(CONFIG_NET_GPTP)
 static inline void ts_register_tx_event(struct eth_context *context,
 					 enet_frame_info_t *frameinfo)
 {
@@ -865,7 +863,7 @@ static inline void ts_register_tx_event(struct eth_context *context,
 		ts_tx_rd = 0;
 	}
 }
-#endif /* CONFIG_PTP_CLOCK_MCUX */
+#endif /* CONFIG_PTP_CLOCK_MCUX && CONFIG_NET_PKT_TIMESTAMP */
 
 static void eth_callback(ENET_Type *base, enet_handle_t *handle,
 #if FSL_FEATURE_ENET_QUEUE > 1
@@ -880,10 +878,10 @@ static void eth_callback(ENET_Type *base, enet_handle_t *handle,
 		eth_rx(context);
 		break;
 	case kENET_TxEvent:
-#if defined(CONFIG_PTP_CLOCK_MCUX)
+#if defined(CONFIG_PTP_CLOCK_MCUX) && defined(CONFIG_NET_GPTP)
 		/* Register event */
 		ts_register_tx_event(context, frameinfo);
-#endif /* CONFIG_PTP_CLOCK_MCUX */
+#endif /* CONFIG_PTP_CLOCK_MCUX && CONFIG_NET_GPTP */
 
 		/* Free the TX buffer. */
 		k_sem_give(&context->tx_buf_sem);
@@ -921,7 +919,13 @@ static void eth_mcux_init(const struct device *dev)
 
 	context->phy_state = eth_mcux_phy_state_initial;
 
+#if defined(CONFIG_SOC_SERIES_IMX_RT10XX)
+	sys_clock = CLOCK_GetFreq(kCLOCK_IpgClk);
+#elif defined(SOC_SERIES_IMX_RT11XX)
+	sys_clock = CLOCK_GetFreq(kCLOCK_Root_Bus);
+#else
 	sys_clock = CLOCK_GetFreq(kCLOCK_CoreSysClk);
+#endif
 
 	ENET_GetDefaultConfig(&enet_config);
 	enet_config.interrupt |= kENET_RxFrameInterrupt;
@@ -1536,7 +1540,7 @@ static int ptp_mcux_init(const struct device *port)
 }
 
 DEVICE_DEFINE(mcux_ptp_clock_0, PTP_CLOCK_NAME, ptp_mcux_init,
-		device_pm_control_nop, &ptp_mcux_0_context, NULL, POST_KERNEL,
+		NULL, &ptp_mcux_0_context, NULL, POST_KERNEL,
 		CONFIG_APPLICATION_INIT_PRIORITY, &api);
 
 #endif /* CONFIG_PTP_CLOCK_MCUX */

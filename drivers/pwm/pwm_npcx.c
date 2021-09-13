@@ -168,8 +168,7 @@ static int pwm_npcx_init(const struct device *dev)
 	const struct pwm_npcx_config *const config = DRV_CONFIG(dev);
 	struct pwm_npcx_data *const data = DRV_DATA(dev);
 	struct pwm_reg *const inst = HAL_INSTANCE(dev);
-	const struct device *const clk_dev =
-					device_get_binding(NPCX_CLK_CTRL_NAME);
+	const struct device *const clk_dev = DEVICE_DT_GET(NPCX_CLK_CTRL_NODE);
 	int ret;
 
 	/*
@@ -219,7 +218,7 @@ static int pwm_npcx_init(const struct device *dev)
 	static struct pwm_npcx_data pwm_npcx_data_##inst;                      \
 									       \
 	DEVICE_DT_INST_DEFINE(inst,					       \
-			    &pwm_npcx_init, device_pm_control_nop,             \
+			    &pwm_npcx_init, NULL,			       \
 			    &pwm_npcx_data_##inst, &pwm_npcx_cfg_##inst,       \
 			    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,  \
 			    &pwm_npcx_driver_api);

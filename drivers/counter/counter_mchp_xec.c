@@ -318,13 +318,13 @@ static int counter_xec_init(const struct device *dev)
 		.config_func = counter_xec_irq_config_##inst,		\
 		.base_address = DT_INST_REG_ADDR(inst),			\
 		.prescaler = DT_INST_PROP(inst, prescaler),		\
-		.girq_id = DT_INST_PROP(inst, girq),			\
-		.girq_bit = DT_INST_PROP(inst, girq_bit),		\
+		.girq_id = DT_INST_PROP_BY_IDX(0, girqs, 0),		\
+		.girq_bit = DT_INST_PROP_BY_IDX(0, girqs, 1),		\
 	};								\
 									\
 	DEVICE_DT_INST_DEFINE(inst,					\
 			    counter_xec_init,				\
-			    device_pm_control_nop,			\
+			    NULL,					\
 			    &counter_xec_dev_data_##inst,		\
 			    &counter_xec_dev_config_##inst,		\
 			    POST_KERNEL,				\

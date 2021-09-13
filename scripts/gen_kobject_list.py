@@ -514,6 +514,14 @@ def find_kobjects(elf, syms):
 
     app_smem_start = syms["_app_smem_start"]
     app_smem_end = syms["_app_smem_end"]
+
+    if "CONFIG_LINKER_USE_PINNED_SECTION" in syms and "_app_smem_pinned_start" in syms:
+        app_smem_pinned_start = syms["_app_smem_pinned_start"]
+        app_smem_pinned_end = syms["_app_smem_pinned_end"]
+    else:
+        app_smem_pinned_start = app_smem_start
+        app_smem_pinned_end = app_smem_end
+
     user_stack_start = syms["z_user_stacks_start"]
     user_stack_end = syms["z_user_stacks_end"]
 
@@ -630,7 +638,9 @@ def find_kobjects(elf, syms):
             continue
 
         _, user_ram_allowed, _ = kobjects[ko.type_obj.name]
-        if not user_ram_allowed and app_smem_start <= addr < app_smem_end:
+        if (not user_ram_allowed and
+            ((app_smem_start <= addr < app_smem_end)
+             or (app_smem_pinned_start <= addr < app_smem_pinned_end))):
             debug("object '%s' found in invalid location %s"
                   % (ko.type_obj.name, hex(addr)))
             continue
@@ -780,7 +790,7 @@ def write_gperf_table(fp, syms, objs, little_endian, static_begin, static_end):
                      " priv_stacks[%d][Z_KERNEL_STACK_LEN(CONFIG_PRIVILEGED_STACK_SIZE)];\n"
                      % stack_counter)
 
-            fp.write("static struct z_stack_data stack_data[%d] = {\n"
+            fp.write("static const struct z_stack_data stack_data[%d] = {\n"
                      % stack_counter)
             counter = 0
             for _, ko in objs.items():
@@ -858,7 +868,6 @@ def write_gperf_table(fp, syms, objs, little_endian, static_begin, static_end):
 
     # Generate the array of already mapped thread indexes
     fp.write('\n')
-    fp.write('Z_GENERIC_SECTION(.kobject_data.data) ')
     fp.write('uint8_t _thread_idx_map[%d] = {' % (thread_max_bytes))
 
     for i in range(0, thread_max_bytes):

@@ -584,7 +584,7 @@ static ssize_t offload_recvfrom(void *obj, void *buf, size_t len,
 		return -1;
 	}
 
-	snprintk(sendbuf, sizeof(sendbuf), "AT+QIRD=%d,%d", sock->sock_fd, len);
+	snprintk(sendbuf, sizeof(sendbuf), "AT+QIRD=%d,%zd", sock->sock_fd, len);
 
 	/* Socket read settings */
 	(void) memset(&sock_data, 0, sizeof(sock_data));
@@ -815,7 +815,7 @@ static ssize_t offload_sendmsg(void *obj, const struct msghdr *msg, int flags)
 	ssize_t sent = 0;
 	int rc;
 
-	LOG_DBG("msg_iovlen:%d flags:%d", msg->msg_iovlen, flags);
+	LOG_DBG("msg_iovlen:%zd flags:%d", msg->msg_iovlen, flags);
 
 	for (int i = 0; i < msg->msg_iovlen; i++) {
 		const char *buf = msg->msg_iov[i].iov_base;
@@ -1156,7 +1156,7 @@ static int modem_init(const struct device *dev)
 	mdata.iface_data.rx_rb_buf     = &mdata.iface_rb_buf[0];
 	mdata.iface_data.rx_rb_buf_len = sizeof(mdata.iface_rb_buf);
 	ret = modem_iface_uart_init(&mctx.iface, &mdata.iface_data,
-				    MDM_UART_DEV_NAME);
+				    MDM_UART_DEV);
 	if (ret < 0) {
 		goto error;
 	}
@@ -1197,7 +1197,7 @@ error:
 }
 
 /* Register the device with the Networking stack. */
-NET_DEVICE_DT_INST_OFFLOAD_DEFINE(0, modem_init, device_pm_control_nop,
+NET_DEVICE_DT_INST_OFFLOAD_DEFINE(0, modem_init, NULL,
 				  &mdata, NULL,
 				  CONFIG_MODEM_QUECTEL_BG9X_INIT_PRIORITY,
 				  &api_funcs, MDM_MAX_DATA_LENGTH);

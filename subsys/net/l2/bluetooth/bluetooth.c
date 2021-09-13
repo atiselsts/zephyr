@@ -603,7 +603,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	default_conn = NULL;
 }
 
-static struct bt_conn_cb conn_callbacks = {
+BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected,
 };
@@ -611,12 +611,14 @@ static struct bt_conn_cb conn_callbacks = {
 
 static int net_bt_init(const struct device *dev)
 {
+	int err;
+
 	NET_DBG("dev %p driver_data %p", dev, dev->data);
 
-#if defined(CONFIG_NET_L2_BT_MGMT)
-	bt_conn_cb_register(&conn_callbacks);
-#endif
-	bt_l2cap_server_register(&server);
+	err = bt_l2cap_server_register(&server);
+	if (err) {
+		return err;
+	}
 
 	net_bt_shell_init();
 
@@ -630,8 +632,7 @@ NET_MGMT_REGISTER_REQUEST_HANDLER(NET_REQUEST_BT_SCAN, bt_scan);
 NET_MGMT_REGISTER_REQUEST_HANDLER(NET_REQUEST_BT_DISCONNECT, bt_disconnect);
 #endif
 
-DEVICE_DEFINE(net_bt, "net_bt", net_bt_init, device_pm_control_nop,
-	      &bt_context_data, NULL, POST_KERNEL,
-	      CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &bt_if_api);
+DEVICE_DEFINE(net_bt, "net_bt", net_bt_init, NULL, &bt_context_data, NULL,
+	      POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &bt_if_api);
 NET_L2_DATA_INIT(net_bt, 0, NET_L2_GET_CTX_TYPE(BLUETOOTH_L2));
 NET_IF_INIT(net_bt, 0, BLUETOOTH_L2, L2CAP_IPSP_MTU, CONFIG_BT_MAX_CONN);

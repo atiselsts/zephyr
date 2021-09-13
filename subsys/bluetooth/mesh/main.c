@@ -1,5 +1,3 @@
-/*  Bluetooth Mesh */
-
 /*
  * Copyright (c) 2017 Intel Corporation
  *
@@ -22,6 +20,7 @@
 
 #include "test.h"
 #include "adv.h"
+#include "host/ecc.h"
 #include "prov.h"
 #include "provisioner.h"
 #include "net.h"
@@ -69,17 +68,11 @@ int bt_mesh_provision(const uint8_t net_key[16], uint16_t net_idx,
 	 * FIXME:
 	 * Should net_key and iv_index be over-ridden?
 	 */
-	if (IS_ENABLED(CONFIG_BT_MESH_CDB)) {
+	if (IS_ENABLED(CONFIG_BT_MESH_CDB) &&
+	    atomic_test_bit(bt_mesh_cdb.flags, BT_MESH_CDB_VALID)) {
 		const struct bt_mesh_comp *comp;
 		const struct bt_mesh_prov *prov;
 		struct bt_mesh_cdb_node *node;
-
-		if (!atomic_test_bit(bt_mesh_cdb.flags,
-				     BT_MESH_CDB_VALID)) {
-			BT_ERR("No valid network");
-			atomic_clear_bit(bt_mesh.flags, BT_MESH_VALID);
-			return -EINVAL;
-		}
 
 		comp = bt_mesh_comp_get();
 		if (comp == NULL) {
@@ -170,13 +163,19 @@ void bt_mesh_reset(void)
 	}
 
 	bt_mesh.iv_index = 0U;
+	bt_mesh.ivu_duration = 0;
 	bt_mesh.seq = 0U;
 
 	memset(bt_mesh.flags, 0, sizeof(bt_mesh.flags));
 
-	k_delayed_work_cancel(&bt_mesh.ivu_timer);
+	/* If this fails, the work handler will return early on the next
+	 * execution, as the device is not provisioned. If the device is
+	 * reprovisioned, the timer is always restarted.
+	 */
+	(void)k_work_cancel_delayable(&bt_mesh.ivu_timer);
 
-	bt_mesh_cfg_reset();
+	bt_mesh_model_reset();
+	bt_mesh_cfg_default_set();
 	bt_mesh_trans_reset();
 	bt_mesh_app_keys_reset();
 	bt_mesh_net_keys_reset();
@@ -322,7 +321,7 @@ int bt_mesh_init(const struct bt_mesh_prov *prov,
 		return err;
 	}
 
-	if (IS_ENABLED(CONFIG_BT_MESH_PROXY)) {
+	if (IS_ENABLED(CONFIG_BT_MESH_GATT)) {
 		bt_mesh_proxy_init();
 	}
 
@@ -333,7 +332,7 @@ int bt_mesh_init(const struct bt_mesh_prov *prov,
 		}
 	}
 
-	bt_mesh_cfg_init();
+	bt_mesh_cfg_default_set();
 	bt_mesh_net_init();
 	bt_mesh_trans_init();
 	bt_mesh_hb_init();

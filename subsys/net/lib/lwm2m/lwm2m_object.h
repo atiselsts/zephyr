@@ -109,23 +109,21 @@
 #define LWM2M_RES_TYPE_NONE	0
 #define LWM2M_RES_TYPE_OPAQUE	1
 #define LWM2M_RES_TYPE_STRING	2
-#define LWM2M_RES_TYPE_UINT64	3
-#define LWM2M_RES_TYPE_U64	3
-#define LWM2M_RES_TYPE_UINT	4
-#define LWM2M_RES_TYPE_U32	4
-#define LWM2M_RES_TYPE_U16	5
-#define LWM2M_RES_TYPE_U8	6
-#define LWM2M_RES_TYPE_INT64	7
-#define LWM2M_RES_TYPE_S64	7
-#define LWM2M_RES_TYPE_INT	8
-#define LWM2M_RES_TYPE_S32	8
-#define LWM2M_RES_TYPE_S16	9
-#define LWM2M_RES_TYPE_S8	10
-#define LWM2M_RES_TYPE_BOOL	11
-#define LWM2M_RES_TYPE_TIME	12
-#define LWM2M_RES_TYPE_FLOAT32	13
-#define LWM2M_RES_TYPE_FLOAT64	14
-#define LWM2M_RES_TYPE_OBJLNK	15
+#define LWM2M_RES_TYPE_UINT	3
+#define LWM2M_RES_TYPE_U32	3
+#define LWM2M_RES_TYPE_U16	4
+#define LWM2M_RES_TYPE_U8	5
+#define LWM2M_RES_TYPE_INT64	6
+#define LWM2M_RES_TYPE_S64	6
+#define LWM2M_RES_TYPE_INT	7
+#define LWM2M_RES_TYPE_S32	7
+#define LWM2M_RES_TYPE_S16	8
+#define LWM2M_RES_TYPE_S8	9
+#define LWM2M_RES_TYPE_BOOL	10
+#define LWM2M_RES_TYPE_TIME	11
+#define LWM2M_RES_TYPE_FLOAT32	12
+#define LWM2M_RES_TYPE_FLOAT64	13
+#define LWM2M_RES_TYPE_OBJLNK	14
 
 /* remember that we have already output a value - can be between two block's */
 #define WRITER_OUTPUT_VALUE      1
@@ -414,6 +412,7 @@ struct lwm2m_block_context {
 	uint8_t token[8];
 	uint8_t tkl;
 	bool last_block : 1;
+	uint16_t res_id;
 };
 
 struct lwm2m_output_context {
@@ -443,6 +442,8 @@ typedef void (*lwm2m_message_timeout_cb_t)(struct lwm2m_message *msg);
 
 /* Internal LwM2M message structure to track in-flight messages. */
 struct lwm2m_message {
+	sys_snode_t node;
+
 	/** LwM2M context related to this message */
 	struct lwm2m_ctx *ctx;
 
@@ -474,9 +475,6 @@ struct lwm2m_message {
 
 	/** Incoming message action */
 	uint8_t operation;
-
-	/** Counter for message re-send / abort handling */
-	uint8_t send_attempts;
 
 	/* Information whether the message was acknowledged. */
 	bool acknowledged : 1;
