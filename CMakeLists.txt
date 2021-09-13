@@ -77,6 +77,8 @@ zephyr_include_directories(
   ${STDINCLUDE}
 )
 
+include(${ZEPHYR_BASE}/cmake/linker_script/${ARCH}/linker.cmake OPTIONAL)
+
 # Don't add non-existing include directories, it creates noise and
 # warnings in some tooling
 foreach(optional_include_dir
@@ -94,6 +96,11 @@ zephyr_compile_definitions(
   KERNEL
   __ZEPHYR__=1
 )
+
+# Ensure that include/toolchain.h includes toolchain/other.h for all off-tree toolchains
+if(TOOLCHAIN_USE_CUSTOM)
+  zephyr_compile_definitions(__TOOLCHAIN_CUSTOM__)
+endif()
 
 # @Intent: Set compiler flags to enable buffer overflow checks in libc functions
 # @config in CONFIG_NO_OPTIMIZATIONS optional : Optimizations may affect security
@@ -169,6 +176,10 @@ if(CONFIG_CPLUSPLUS)
     set(STD_CPP_DIALECT_FLAGS $<TARGET_PROPERTY:compiler-cpp,dialect_cpp17>)
   elseif(CONFIG_STD_CPP2A)
     set(STD_CPP_DIALECT_FLAGS $<TARGET_PROPERTY:compiler-cpp,dialect_cpp2a>)
+  elseif(CONFIG_STD_CPP20)
+    set(STD_CPP_DIALECT_FLAGS $<TARGET_PROPERTY:compiler-cpp,dialect_cpp20>)
+  elseif(CONFIG_STD_CPP2B)
+    set(STD_CPP_DIALECT_FLAGS $<TARGET_PROPERTY:compiler-cpp,dialect_cpp2b>)
   else()
     assert(0 "Unreachable code. Expected C++ standard to have been chosen. See Kconfig.zephyr.")
   endif()
@@ -346,8 +357,13 @@ endif()
 # Declare MPU userspace dependencies before the linker scripts to make
 # sure the order of dependencies are met
 if(CONFIG_USERSPACE)
+  add_custom_target(app_smem)
   set(APP_SMEM_ALIGNED_DEP app_smem_aligned_linker)
   set(APP_SMEM_UNALIGNED_DEP app_smem_unaligned_linker)
+endif()
+
+if(CONFIG_USERSPACE)
+  set(KOBJECT_LINKER_DEP kobject_linker)
 endif()
 
 get_property(TOPT GLOBAL PROPERTY TOPT)
@@ -578,22 +594,11 @@ add_custom_command(
 
 add_custom_target(${SYSCALL_LIST_H_TARGET} DEPENDS ${syscall_list_h})
 
-# This only works for CMake version >=3.15, but as the property is ignored on
-# older CMake versions there is no reason to check for version.
 set_property(TARGET ${SYSCALL_LIST_H_TARGET}
              APPEND PROPERTY
              ADDITIONAL_CLEAN_FILES
              ${CMAKE_CURRENT_BINARY_DIR}/include/generated/syscalls
 )
-
-# Only works with make.
-if(${CMAKE_VERSION} VERSION_LESS 3.15)
-  set_property(DIRECTORY
-               APPEND PROPERTY
-               ADDITIONAL_MAKE_CLEAN_FILES
-               ${CMAKE_CURRENT_BINARY_DIR}/include/generated/syscalls
-  )
-endif()
 
 add_custom_target(${PARSE_SYSCALLS_TARGET}
   DEPENDS
@@ -696,27 +701,32 @@ add_subdirectory(kernel)
 get_property(ZEPHYR_LIBS_PROPERTY GLOBAL PROPERTY ZEPHYR_LIBS)
 
 foreach(zephyr_lib ${ZEPHYR_LIBS_PROPERTY})
-  get_property(source_list  TARGET ${zephyr_lib} PROPERTY SOURCES)
   get_property(lib_type     TARGET ${zephyr_lib} PROPERTY TYPE)
-  get_property(lib_imported TARGET ${zephyr_lib} PROPERTY IMPORTED)
-
   # To prevent CMake failure when a driver is enabled, for example: REGULATOR=y
   # we disable any Zephyr libraries without sources and adds the `empty_file.c`.
   if(${lib_type} STREQUAL STATIC_LIBRARY
-     AND NOT ${lib_imported}
-     AND NOT source_list
      AND NOT ${zephyr_lib} STREQUAL app
   )
-    message(WARNING
-      "No SOURCES given to Zephyr library: ${zephyr_lib}\nExcluding target from build."
+    get_property(source_list  TARGET ${zephyr_lib} PROPERTY SOURCES)
+    get_property(lib_imported TARGET ${zephyr_lib} PROPERTY IMPORTED)
+    if(NOT source_list
+       AND NOT ${lib_imported}
     )
-    target_sources(${zephyr_lib} PRIVATE ${ZEPHYR_BASE}/misc/empty_file.c)
-    set_property(TARGET ${zephyr_lib} PROPERTY EXCLUDE_FROM_ALL TRUE)
-    list(REMOVE_ITEM ZEPHYR_LIBS_PROPERTY ${zephyr_lib})
-  else()
-    # TODO: Could this become an INTERFACE property of zephyr_interface?
-    add_dependencies(${zephyr_lib} zephyr_generated_headers)
+      get_property(allow_empty TARGET ${zephyr_lib} PROPERTY ALLOW_EMPTY)
+      if(NOT "${allow_empty}")
+        message(WARNING
+          "No SOURCES given to Zephyr library: ${zephyr_lib}\nExcluding target from build."
+        )
+      endif()
+      target_sources(${zephyr_lib} PRIVATE ${ZEPHYR_BASE}/misc/empty_file.c)
+      set_property(TARGET ${zephyr_lib} PROPERTY EXCLUDE_FROM_ALL TRUE)
+      list(REMOVE_ITEM ZEPHYR_LIBS_PROPERTY ${zephyr_lib})
+      continue()
+    endif()
   endif()
+
+  # TODO: Could this become an INTERFACE property of zephyr_interface?
+  add_dependencies(${zephyr_lib} zephyr_generated_headers)
 endforeach()
 
 get_property(OUTPUT_FORMAT        GLOBAL PROPERTY PROPERTY_OUTPUT_FORMAT)
@@ -779,6 +789,7 @@ if(CONFIG_HAS_DTS)
     --output-source dev_handles.c
     --kernel $<TARGET_FILE:${ZEPHYR_PREBUILT_EXECUTABLE}>
     --zephyr-base ${ZEPHYR_BASE}
+    --start-symbol "$<TARGET_PROPERTY:linker,devices_start_symbol>"
     DEPENDS ${ZEPHYR_PREBUILT_EXECUTABLE}
     )
   set_property(GLOBAL APPEND PROPERTY GENERATED_KERNEL_SOURCE_FILES dev_handles.c)
@@ -847,6 +858,7 @@ if(CONFIG_USERSPACE)
     COMMAND
     ${GPERF}
     --output-file ${KOBJECT_HASH_OUTPUT_SRC_PRE}
+    --multiple-iterations 10
     ${KOBJECT_HASH_LIST}
     DEPENDS kobj_hash_list ${KOBJECT_HASH_LIST}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -918,6 +930,7 @@ if(CONFIG_USERSPACE)
     COMMAND $<TARGET_PROPERTY:bintools,elfconvert_command>
             $<TARGET_PROPERTY:bintools,elfconvert_flag>
             $<TARGET_PROPERTY:bintools,elfconvert_flag_section_rename>.data=.kobject_data.data
+            $<TARGET_PROPERTY:bintools,elfconvert_flag_section_rename>.sdata=.kobject_data.sdata
             $<TARGET_PROPERTY:bintools,elfconvert_flag_section_rename>.text=.kobject_data.text
             $<TARGET_PROPERTY:bintools,elfconvert_flag_section_rename>.rodata=.kobject_data.rodata
             $<TARGET_PROPERTY:bintools,elfconvert_flag_infile>${KOBJECT_HASH_OUTPUT_OBJ_PATH}
@@ -968,18 +981,42 @@ toolchain_ld_configure_files()
 if(CONFIG_USERSPACE)
   set(APP_SMEM_ALIGNED_LD "${PROJECT_BINARY_DIR}/include/generated/app_smem_aligned.ld")
   set(APP_SMEM_UNALIGNED_LD "${PROJECT_BINARY_DIR}/include/generated/app_smem_unaligned.ld")
+
+  if(CONFIG_LINKER_USE_PINNED_SECTION)
+    set(APP_SMEM_PINNED_ALIGNED_LD
+         "${PROJECT_BINARY_DIR}/include/generated/app_smem_pinned_aligned.ld")
+    set(APP_SMEM_PINNED_UNALIGNED_LD
+         "${PROJECT_BINARY_DIR}/include/generated/app_smem_pinned_unaligned.ld")
+
+    if(NOT CONFIG_LINKER_GENERIC_SECTIONS_PRESENT_AT_BOOT)
+      # The libc partition may hold symbols that are required during boot process,
+      # for example, stack guard (if enabled). So the libc partition must be pinned
+      # if not sections are in physical memory at boot, as the paging mechanism is
+      # only initialized post-kernel.
+      set_property(TARGET app_smem APPEND PROPERTY pinned_partitions "z_libc_partition")
+    endif()
+
+    get_property(APP_SMEM_PINNED_PARTITION_LIST TARGET app_smem PROPERTY pinned_partitions)
+    if(APP_SMEM_PINNED_PARTITION_LIST)
+      list(JOIN APP_SMEM_PINNED_PARTITION_LIST "," APP_SMEM_PINNED_PARTITION_LIST_ARG_CSL)
+      set(APP_SMEM_PINNED_PARTITION_LIST_ARG "--pinpartitions=${APP_SMEM_PINNED_PARTITION_LIST_ARG_CSL}")
+    endif()
+  endif()
+
   set(OBJ_FILE_DIR "${PROJECT_BINARY_DIR}/../")
 
   add_custom_target(
     ${APP_SMEM_ALIGNED_DEP}
     DEPENDS
     ${APP_SMEM_ALIGNED_LD}
+    ${APP_SMEM_PINNED_ALIGNED_LD}
     )
 
   add_custom_target(
     ${APP_SMEM_UNALIGNED_DEP}
     DEPENDS
     ${APP_SMEM_UNALIGNED_LD}
+    ${APP_SMEM_PINNED_UNALIGNED_LD}
     )
 
   if(CONFIG_NEWLIB_LIBC)
@@ -990,11 +1027,13 @@ if(CONFIG_USERSPACE)
   endif()
 
   add_custom_command(
-    OUTPUT ${APP_SMEM_UNALIGNED_LD}
+    OUTPUT ${APP_SMEM_UNALIGNED_LD} ${APP_SMEM_PINNED_UNALIGNED_LD}
     COMMAND ${PYTHON_EXECUTABLE}
     ${ZEPHYR_BASE}/scripts/gen_app_partitions.py
     -d ${OBJ_FILE_DIR}
     -o ${APP_SMEM_UNALIGNED_LD}
+    $<$<BOOL:${APP_SMEM_PINNED_UNALIGNED_LD}>:--pinoutput=${APP_SMEM_PINNED_UNALIGNED_LD}>
+    ${APP_SMEM_PINNED_PARTITION_LIST_ARG}
     ${NEWLIB_PART}
     $<TARGET_PROPERTY:zephyr_property_target,COMPILE_OPTIONS>
     $<$<BOOL:${CMAKE_VERBOSE_MAKEFILE}>:--verbose>
@@ -1012,6 +1051,7 @@ if(CONFIG_USERSPACE)
     ${CODE_RELOCATION_DEP}
     ${APP_SMEM_UNALIGNED_DEP}
     ${APP_SMEM_UNALIGNED_LD}
+    ${APP_SMEM_PINNED_UNALIGNED_LD}
     zephyr_generated_headers
     )
 
@@ -1044,11 +1084,13 @@ if(CONFIG_USERSPACE)
   add_dependencies(     app_smem_unaligned_prebuilt linker_app_smem_unaligned_script ${OFFSETS_LIB})
 
   add_custom_command(
-    OUTPUT ${APP_SMEM_ALIGNED_LD}
+    OUTPUT ${APP_SMEM_ALIGNED_LD} ${APP_SMEM_PINNED_ALIGNED_LD}
     COMMAND ${PYTHON_EXECUTABLE}
     ${ZEPHYR_BASE}/scripts/gen_app_partitions.py
     -e $<TARGET_FILE:app_smem_unaligned_prebuilt>
     -o ${APP_SMEM_ALIGNED_LD}
+    $<$<BOOL:${APP_SMEM_PINNED_ALIGNED_LD}>:--pinoutput=${APP_SMEM_PINNED_ALIGNED_LD}>
+    ${APP_SMEM_PINNED_PARTITION_LIST_ARG}
     ${NEWLIB_PART}
     $<TARGET_PROPERTY:zephyr_property_target,COMPILE_OPTIONS>
     $<$<BOOL:${CMAKE_VERBOSE_MAKEFILE}>:--verbose>
@@ -1062,10 +1104,137 @@ if(CONFIG_USERSPACE)
     )
 endif()
 
+if(CONFIG_USERSPACE)
+  # This CONFIG_USERSPACE block is to create place holders to reserve space
+  # for the gperf generated structures for zephyr_prebuilt.elf.
+  # These place holders are there so that the placement of kobjects would be
+  # the same between linking zephyr_prebuilt.elf and zephyr.elf, as
+  # the gperf hash table is hashed on the addresses of kobjects.
+  # The placeholders are generated from app_smem_unaligned_prebuilt.elf.
+
+  set(KOBJECT_PREBUILT_HASH_LIST           kobject_prebuilt_hash.gperf)
+  set(KOBJECT_PREBUILT_HASH_OUTPUT_SRC_PRE kobject_prebuilt_hash_preprocessed.c)
+  set(KOBJECT_PREBUILT_HASH_OUTPUT_SRC     kobject_prebuilt_hash.c)
+  set(KOBJECT_PREBUILT_HASH_OUTPUT_OBJ     kobject_prebuilt_hash.c.obj)
+
+  add_custom_command(
+    OUTPUT ${KOBJECT_PREBUILT_HASH_LIST}
+    COMMAND
+    ${PYTHON_EXECUTABLE}
+    ${GEN_KOBJ_LIST}
+    --kernel $<TARGET_FILE:app_smem_unaligned_prebuilt>
+    --gperf-output ${KOBJECT_PREBUILT_HASH_LIST}
+    ${gen_kobject_list_include_args}
+    $<$<BOOL:${CMAKE_VERBOSE_MAKEFILE}>:--verbose>
+    DEPENDS
+    app_smem_unaligned_prebuilt
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+  add_custom_target(
+    kobj_prebuilt_hash_list
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${KOBJECT_PREBUILT_HASH_LIST}
+  )
+
+  add_custom_command(
+    OUTPUT ${KOBJECT_PREBUILT_HASH_OUTPUT_SRC_PRE}
+    COMMAND
+    ${GPERF}
+    --output-file ${KOBJECT_PREBUILT_HASH_OUTPUT_SRC_PRE}
+    --multiple-iterations 10
+    ${KOBJECT_PREBUILT_HASH_LIST}
+    DEPENDS kobj_prebuilt_hash_list ${KOBJECT_PREBUILT_HASH_LIST}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+  add_custom_target(
+    kobj_prebuilt_hash_output_src_pre
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${KOBJECT_PREBUILT_HASH_OUTPUT_SRC_PRE}
+  )
+
+  add_custom_command(
+    OUTPUT ${KOBJECT_PREBUILT_HASH_OUTPUT_SRC}
+    COMMAND
+    ${PYTHON_EXECUTABLE}
+    ${PROCESS_GPERF}
+    -i ${KOBJECT_PREBUILT_HASH_OUTPUT_SRC_PRE}
+    -o ${KOBJECT_PREBUILT_HASH_OUTPUT_SRC}
+    -p "struct z_object"
+    $<$<BOOL:${CMAKE_VERBOSE_MAKEFILE}>:--verbose>
+    DEPENDS kobj_prebuilt_hash_output_src_pre ${KOBJECT_PREBUILT_HASH_OUTPUT_SRC_PRE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+  add_custom_target(
+    kobj_prebuilt_hash_output_src
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${KOBJECT_PREBUILT_HASH_OUTPUT_SRC}
+  )
+
+  add_library(
+    kobj_prebuilt_hash_output_lib
+    STATIC ${CMAKE_CURRENT_BINARY_DIR}/${KOBJECT_PREBUILT_HASH_OUTPUT_SRC}
+    )
+
+  set_source_files_properties(${KOBJECT_PREBUILT_HASH_OUTPUT_SRC}
+    PROPERTIES COMPILE_FLAGS
+    "${NO_COVERAGE_FLAGS} -fno-function-sections -fno-data-sections")
+
+  set_source_files_properties(${KOBJECT_PREBUILT_HASH_OUTPUT_SRC}
+    PROPERTIES COMPILE_DEFINITIONS "${compile_definitions_interface}")
+
+  add_library(kobj_prebuilt_hash_output_lib_interface INTERFACE)
+
+  target_link_libraries(
+    kobj_prebuilt_hash_output_lib
+    kobj_prebuilt_hash_output_lib_interface
+  )
+
+  foreach(incl ${include_dir_in_interface})
+    target_include_directories(
+      kobj_prebuilt_hash_output_lib_interface
+      INTERFACE ${incl}
+    )
+  endforeach()
+
+  foreach(incl ${sys_include_dir_in_interface})
+    target_include_directories(
+      kobj_prebuilt_hash_output_lib_interface
+      SYSTEM INTERFACE ${incl}
+    )
+  endforeach()
+
+  set(
+    KOBJECT_PREBUILT_HASH_OUTPUT_OBJ_PATH
+    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/kobj_prebuilt_hash_output_lib.dir/${KOBJECT_PREBUILT_HASH_OUTPUT_OBJ}
+  )
+
+  set(KOBJECT_LINKER_HEADER_DATA "${PROJECT_BINARY_DIR}/include/generated/linker-kobject-prebuilt-data.h")
+
+  add_custom_command(
+    OUTPUT ${KOBJECT_LINKER_HEADER_DATA}
+    COMMAND
+    ${PYTHON_EXECUTABLE}
+    ${ZEPHYR_BASE}/scripts/gen_kobject_placeholders.py
+    --object ${KOBJECT_PREBUILT_HASH_OUTPUT_OBJ_PATH}
+    --outdir ${PROJECT_BINARY_DIR}/include/generated
+    --datapct ${CONFIG_KOBJECT_DATA_AREA_RESERVE_EXTRA_PERCENT}
+    --rodata ${CONFIG_KOBJECT_RODATA_AREA_EXTRA_BYTES}
+    $<$<BOOL:${CMAKE_VERBOSE_MAKEFILE}>:--verbose>
+    DEPENDS
+    kobj_prebuilt_hash_output_lib
+    ${KOBJECT_PREBUILT_HASH_OUTPUT_OBJ_PATH}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+
+  add_custom_target(
+    ${KOBJECT_LINKER_DEP}
+    DEPENDS
+    ${KOBJECT_LINKER_HEADER_DATA}
+  )
+endif()
+
 configure_linker_script(
   linker_zephyr_prebuilt.cmd
   "-DLINKER_ZEPHYR_PREBUILT"
   ${APP_SMEM_ALIGNED_DEP}
+  ${KOBJECT_LINKER_DEP}
   ${CODE_RELOCATION_DEP}
   zephyr_generated_headers
   )
@@ -1329,8 +1498,8 @@ if(CONFIG_OUTPUT_STAT)
     COMMAND $<TARGET_PROPERTY:bintools,readelf_command>
             $<TARGET_PROPERTY:bintools,readelf_flag>
             $<TARGET_PROPERTY:bintools,readelf_flag_headers>
-            $<TARGET_PROPERTY:bintools,readelf_flag_infile> ${KERNEL_ELF_NAME}
-            $<TARGET_PROPERTY:bintools,readelf_flag_outfile> ${KERNEL_STAT_NAME}
+            $<TARGET_PROPERTY:bintools,readelf_flag_infile>${KERNEL_ELF_NAME}
+            $<TARGET_PROPERTY:bintools,readelf_flag_outfile>${KERNEL_STAT_NAME}
             $<TARGET_PROPERTY:bintools,readelf_flag_final>
     )
   list(APPEND
@@ -1391,6 +1560,24 @@ list(APPEND
   post_build_byproducts
   ${extra_post_build_byproducts}
   )
+
+if(CONFIG_LOG_DICTIONARY_SUPPORT)
+  set(LOG_DICT_DB_NAME ${PROJECT_BINARY_DIR}/log_dictionary.json)
+
+  list(APPEND
+    post_build_commands
+    COMMAND
+    ${PYTHON_EXECUTABLE}
+    ${ZEPHYR_BASE}/scripts/logging/dictionary/database_gen.py
+    ${KERNEL_ELF_NAME}
+    ${LOG_DICT_DB_NAME}
+    --build ${BUILD_VERSION}
+    )
+  list(APPEND
+    post_build_byproducts
+    ${LOG_DICT_DB_NAME}
+    )
+endif()
 
 # Add post_build_commands to post-process the final .elf file produced by
 # either the ZEPHYR_PREBUILT_EXECUTABLE or the KERNEL_ELF executable

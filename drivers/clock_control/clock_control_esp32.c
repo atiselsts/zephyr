@@ -357,21 +357,22 @@ static const struct clock_control_driver_api clock_control_esp32_api = {
 };
 
 static const struct esp32_clock_config esp32_clock_config0 = {
-	.clk_src_sel = DT_PROP(DT_INST(0, cadence_tensilica_xtensa_lx6), clock_source),
-	.cpu_freq = DT_PROP(DT_INST(0, cadence_tensilica_xtensa_lx6), clock_frequency),
+	.clk_src_sel = DT_PROP(DT_INST(0, cdns_tensilica_xtensa_lx6), clock_source),
+	.cpu_freq = DT_PROP(DT_INST(0, cdns_tensilica_xtensa_lx6), clock_frequency),
 	.xtal_freq_sel = DT_INST_PROP(0, xtal_freq),
 	.xtal_div =  DT_INST_PROP(0, xtal_div),
 };
 
 DEVICE_DT_INST_DEFINE(0,
 		    &clock_control_esp32_init,
-		    device_pm_control_nop,
+		    NULL,
 		    NULL, &esp32_clock_config0,
 		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,
 		    &clock_control_esp32_api);
 
-BUILD_ASSERT((CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC) == MHZ(DT_PROP(DT_INST(0, cadence_tensilica_xtensa_lx6), clock_frequency)),
-		"SYS_CLOCK_HW_CYCLES_PER_SEC Value must be equal to CPU_Freq");
+BUILD_ASSERT((CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC) ==
+		    MHZ(DT_PROP(DT_INST(0, cdns_tensilica_xtensa_lx6), clock_frequency)),
+		    "SYS_CLOCK_HW_CYCLES_PER_SEC Value must be equal to CPU_Freq");
 
-BUILD_ASSERT(DT_NODE_HAS_PROP(DT_INST(0, cadence_tensilica_xtensa_lx6), clock_source),
+BUILD_ASSERT(DT_NODE_HAS_PROP(DT_INST(0, cdns_tensilica_xtensa_lx6), clock_source),
 		"CPU clock-source property must be set to ESP32_CLK_SRC_XTAL or ESP32_CLK_SRC_PLL");

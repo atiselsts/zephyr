@@ -19,6 +19,8 @@
 #define DT_DRV_COMPAT ite_it8xxx2_adc
 #elif DT_HAS_COMPAT_STATUS_OKAY(microchip_xec_adc)
 #define DT_DRV_COMPAT microchip_xec_adc
+#elif DT_HAS_COMPAT_STATUS_OKAY(microchip_xec_adc_v2)
+#define DT_DRV_COMPAT microchip_xec_adc_v2
 #elif DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf_adc)
 #define DT_DRV_COMPAT nordic_nrf_adc
 #elif DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf_saadc)
@@ -33,6 +35,8 @@
 #define DT_DRV_COMPAT nuvoton_npcx_adc
 #elif DT_HAS_COMPAT_STATUS_OKAY(ti_cc32xx_adc)
 #define DT_DRV_COMPAT ti_cc32xx_adc
+#elif DT_HAS_COMPAT_STATUS_OKAY(zephyr_adc_emul)
+#define DT_DRV_COMPAT zephyr_adc_emul
 #else
 #error No known devicetree compatible match for ADC shell
 #endif

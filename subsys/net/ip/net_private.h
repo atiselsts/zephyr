@@ -47,6 +47,8 @@ extern void net_if_post_init(void);
 extern void net_if_carrier_down(struct net_if *iface);
 extern void net_if_stats_reset(struct net_if *iface);
 extern void net_if_stats_reset_all(void);
+extern void net_process_rx_packet(struct net_pkt *pkt);
+extern void net_process_tx_packet(struct net_pkt *pkt);
 
 #if defined(CONFIG_NET_NATIVE) || defined(CONFIG_NET_OFFLOAD)
 extern void net_context_init(void);
@@ -164,6 +166,15 @@ enum net_verdict net_context_packet_received(struct net_conn *conn,
 #if defined(CONFIG_NET_IPV4)
 extern uint16_t net_calc_chksum_ipv4(struct net_pkt *pkt);
 #endif /* CONFIG_NET_IPV4 */
+
+#if defined(CONFIG_NET_IPV4_IGMP)
+uint16_t net_calc_chksum_igmp(uint8_t *data, size_t len);
+enum net_verdict net_ipv4_igmp_input(struct net_pkt *pkt,
+				     struct net_ipv4_hdr *ip_hdr);
+#else
+#define net_ipv4_igmp_input(...)
+#define net_calc_chksum_igmp(data, len) 0U
+#endif /* CONFIG_NET_IPV4_IGMP */
 
 static inline uint16_t net_calc_chksum_icmpv6(struct net_pkt *pkt)
 {

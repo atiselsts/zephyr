@@ -10,6 +10,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/i2c/i2c.h>
 #include <dt-bindings/pwm/pwm.h>
+#include <freq.h>
 
 / {
 	chosen {
@@ -31,6 +32,48 @@
 		compatible = "mmio-sram";
 	};
 
+	clocks {
+		clk_hse: clk-hse {
+			#clock-cells = <0>;
+			compatible = "st,stm32-hse-clock";
+			status = "disabled";
+		};
+
+		clk_hsi: clk-hsi {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <DT_FREQ_M(16)>;
+			status = "disabled";
+		};
+
+		clk_msi: clk-msi {
+			#clock-cells = <0>;
+			compatible = "st,stm32l0-msi-clock";
+			msi-range = <5>; /* 2.1MHz (reset value) */
+			status = "disabled";
+		};
+
+		clk_lse: clk-lse {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <32768>;
+			status = "disabled";
+		};
+
+		clk_lsi: clk-lsi {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <DT_FREQ_K(37)>;
+			status = "disabled";
+		};
+
+		pll: pll {
+			#clock-cells = <0>;
+			compatible = "st,stm32l0-pll-clock";
+			status = "disabled";
+		};
+	};
+
 	soc {
 
 		flash: flash-controller@40023c00 {
@@ -44,10 +87,13 @@
 			#size-cells = <1>;
 
 			flash0: flash@8000000 {
-				compatible = "soc-nv-flash";
+				compatible = "st,stm32-nv-flash", "soc-nv-flash";
 				label = "FLASH_STM32";
 
 				write-block-size = <4>;
+				/* maximum erase time(ms) for a 128B half-page
+				 */
+				max-erase-time = <4>;
 			};
 		};
 
@@ -375,6 +421,16 @@
 			compatible = "st,stm32-eeprom";
 			status = "disabled";
 			label = "EEPROM_0";
+		};
+
+		dma1: dma@40026000 {
+			compatible = "st,stm32-dma-v2bis";
+			#dma-cells = <2>;
+			reg = <0x40026000 0x400>;
+			clocks = <&rcc STM32_CLOCK_BUS_AHB1 0x1000000>;
+			interrupts = <11 0 12 0 13 0 14 0 15 0 16 0 17 0>;
+			status = "disabled";
+			label = "DMA_1";
 		};
 	};
 };

@@ -266,6 +266,9 @@ static struct ethernet_capabilities eth_hw_caps[] = {
 	EC(ETHERNET_DUPLEX_SET,           "Half/full duplex"),
 	EC(ETHERNET_PTP,                  "IEEE 802.1AS gPTP clock"),
 	EC(ETHERNET_QAV,                  "IEEE 802.1Qav (credit shaping)"),
+	EC(ETHERNET_QBV,                  "IEEE 802.1Qbv (scheduled traffic)"),
+	EC(ETHERNET_QBU,                  "IEEE 802.1Qbu (frame preemption)"),
+	EC(ETHERNET_TXTIME,               "TXTIME"),
 	EC(ETHERNET_PROMISC_MODE,         "Promiscuous mode"),
 	EC(ETHERNET_PRIORITY_QUEUES,      "Priority queues"),
 	EC(ETHERNET_HW_FILTERING,         "MAC address filtering"),
@@ -942,7 +945,7 @@ static char *get_net_pkt_tc_stats_detail(struct net_if *iface, int i,
 }
 #endif /* (NET_TC_TX_COUNT > 1) || (NET_TC_RX_COUNT > 1) */
 
-#if (NET_TC_TX_COUNT == 1) || (NET_TC_RX_COUNT == 1)
+#if (NET_TC_TX_COUNT <= 1) || (NET_TC_RX_COUNT <= 1)
 static char *get_net_pkt_stats_detail(struct net_if *iface, bool is_tx)
 {
 	static char extra_stats[sizeof("\t[0=xxxx us]") + sizeof("->xxxx") *
@@ -1236,7 +1239,12 @@ static void net_shell_print_statistics(struct net_if *iface, void *user_data)
 	   GET_STAT(iface, icmp.typeerr),
 	   GET_STAT(iface, icmp.chkerr));
 #endif
-
+#if defined(CONFIG_NET_STATISTICS_IGMP)
+	PR("IGMP recv      %d\tsent\t%d\tdrop\t%d\n",
+	   GET_STAT(iface, ipv4_igmp.recv),
+	   GET_STAT(iface, ipv4_igmp.sent),
+	   GET_STAT(iface, ipv4_igmp.drop));
+#endif /* CONFIG_NET_STATISTICS_IGMP */
 #if defined(CONFIG_NET_STATISTICS_UDP) && defined(CONFIG_NET_NATIVE_UDP)
 	PR("UDP recv       %d\tsent\t%d\tdrop\t%d\n",
 	   GET_STAT(iface, udp.recv),
@@ -2154,7 +2162,7 @@ static void print_dns_info(const struct shell *shell,
 	for (i = 0; i < CONFIG_DNS_NUM_CONCUR_QUERIES; i++) {
 		int32_t remaining;
 
-		if (!ctx->queries[i].cb) {
+		if (!ctx->queries[i].cb || !ctx->queries[i].query) {
 			continue;
 		}
 
@@ -3798,7 +3806,8 @@ static void nbr_cb(struct net_nbr *nbr, void *user_data)
 	   net_sprint_ll_addr(
 		   net_nbr_get_lladdr(nbr->idx)->addr,
 		   net_nbr_get_lladdr(nbr->idx)->len),
-	   net_nbr_get_lladdr(nbr->idx)->len == 8U ? "" : padding,
+	   nbr->idx == NET_NBR_LLADDR_UNKNOWN ? "" :
+		(net_nbr_get_lladdr(nbr->idx)->len == 8U ? "" : padding),
 	   net_sprint_ipv6_addr(&net_ipv6_nbr_data(nbr)->addr));
 }
 #endif
@@ -5524,8 +5533,7 @@ static int cmd_net_suspend(const struct shell *shell, size_t argc,
 
 		dev = net_if_get_device(iface);
 
-		ret = device_set_power_state(dev, DEVICE_PM_SUSPEND_STATE,
-					     NULL, NULL);
+		ret = pm_device_state_set(dev, PM_DEVICE_STATE_SUSPENDED);
 		if (ret != 0) {
 			PR_INFO("Iface could not be suspended: ");
 
@@ -5569,8 +5577,7 @@ static int cmd_net_resume(const struct shell *shell, size_t argc,
 
 		dev = net_if_get_device(iface);
 
-		ret = device_set_power_state(dev, DEVICE_PM_ACTIVE_STATE,
-					     NULL, NULL);
+		ret = pm_device_state_set(dev, PM_DEVICE_STATE_ACTIVE);
 		if (ret != 0) {
 			PR_INFO("Iface could not be resumed\n");
 		}

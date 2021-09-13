@@ -67,7 +67,7 @@ union z_object_data {
 
 #ifdef CONFIG_GEN_PRIV_STACKS
 	/* Metadata for K_OBJ_THREAD_STACK_ELEMENT */
-	struct z_stack_data *stack_data;
+	const struct z_stack_data *stack_data;
 #else
 	/* Stack buffer size for K_OBJ_THREAD_STACK_ELEMENT */
 	size_t stack_size;
@@ -110,7 +110,7 @@ struct z_object_assignment {
 #define K_THREAD_ACCESS_GRANT(name_, ...) \
 	static void * const _CONCAT(_object_list_, name_)[] = \
 		{ __VA_ARGS__, NULL }; \
-	static const Z_STRUCT_SECTION_ITERABLE(z_object_assignment, \
+	static const STRUCT_SECTION_ITERABLE(z_object_assignment, \
 					_CONCAT(_object_access_, name_)) = \
 			{ (&_k_thread_obj_ ## name_), \
 			  (_CONCAT(_object_list_, name_)) }

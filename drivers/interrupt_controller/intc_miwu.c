@@ -23,8 +23,8 @@
  * it include:
  *  1. npcxn-miwus-wui-map.dtsi: it presents relationship between wake-up inputs
  *     (WUI) and its source device such as gpio, timer, eSPI VWs and so on.
- *  2. npcx7-miwus-int-map.dtsi: it presents relationship between MIWU group
- *     and NVIC interrupt in npcx7. Please notice it isn't 1-to-1 mapping.
+ *  2. npcxn-miwus-int-map.dtsi: it presents relationship between MIWU group
+ *     and NVIC interrupt in npcx series. Please notice it isn't 1-to-1 mapping.
  *     For example, here is the mapping between miwu0's group a & d and IRQ7:
  *
  *     map_miwu0_groups: {
@@ -168,6 +168,20 @@ void npcx_miwu_irq_disable(const struct npcx_wui *wui)
 	const uint32_t base = DRV_CONFIG(miwu_devs[wui->table])->base;
 
 	NPCX_WKEN(base, wui->group) &= ~BIT(wui->bit);
+}
+
+void npcx_miwu_io_enable(const struct npcx_wui *wui)
+{
+	const uint32_t base = DRV_CONFIG(miwu_devs[wui->table])->base;
+
+	NPCX_WKINEN(base, wui->group) |= BIT(wui->bit);
+}
+
+void npcx_miwu_io_disable(const struct npcx_wui *wui)
+{
+	const uint32_t base = DRV_CONFIG(miwu_devs[wui->table])->base;
+
+	NPCX_WKINEN(base, wui->group) &= ~BIT(wui->bit);
 }
 
 bool npcx_miwu_irq_get_state(const struct npcx_wui *wui)
@@ -360,7 +374,7 @@ int npcx_miwu_manage_dev_callback(struct miwu_dev_callback *cb, bool set)
 									       \
 	DEVICE_DT_INST_DEFINE(inst,					       \
 			    NPCX_MIWU_INIT_FUNC(inst),                         \
-			    device_pm_control_nop,			       \
+			    NULL,					       \
 			    NULL, &miwu_config_##inst,                         \
 			    PRE_KERNEL_1,                                      \
 			    CONFIG_KERNEL_INIT_PRIORITY_OBJECTS, NULL);        \

@@ -76,14 +76,17 @@ extern const struct log_backend __log_backends_end[];
  * @param _api		Logger backend API.
  * @param _autostart	If true backend is initialized and activated together
  *			with the logger subsystem.
+ * @param ...		Optional context.
  */
-#define LOG_BACKEND_DEFINE(_name, _api, _autostart)			       \
+#define LOG_BACKEND_DEFINE(_name, _api, _autostart, ...)		       \
 	static struct log_backend_control_block UTIL_CAT(backend_cb_, _name) = \
 	{								       \
+		COND_CODE_0(NUM_VA_ARGS_LESS_1(_, ##__VA_ARGS__),	       \
+				(), (.ctx = __VA_ARGS__,))		       \
 		.id = 0,						       \
 		.active = false,					       \
 	};								       \
-	static const Z_STRUCT_SECTION_ITERABLE(log_backend, _name) =	       \
+	static const STRUCT_SECTION_ITERABLE(log_backend, _name) =	       \
 	{								       \
 		.api = &_api,						       \
 		.cb = &UTIL_CAT(backend_cb_, _name),			       \

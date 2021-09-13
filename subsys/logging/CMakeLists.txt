@@ -5,6 +5,7 @@ if(NOT CONFIG_LOG_MINIMAL)
     CONFIG_LOG
     log_list.c
     log_core.c
+    log_mgmt.c
     log_msg.c
     log_output.c
   )
@@ -24,8 +25,6 @@ if(NOT CONFIG_LOG_MINIMAL)
     CONFIG_LOG_BACKEND_FS
     log_backend_fs.c
   )
-
-  zephyr_link_libraries_ifdef(CONFIG_LOG_BACKEND_FS LITTLEFS)
 
   zephyr_sources_ifdef(
     CONFIG_LOG_CMDS
@@ -77,6 +76,10 @@ if(NOT CONFIG_LOG_MINIMAL)
     CONFIG_LOG_BACKEND_SPINEL
     log_backend_spinel.c
   )
+
+  if(CONFIG_LOG_DICTIONARY_SUPPORT)
+    zephyr_sources(log_output_dict.c)
+  endif()
 
 else()
   zephyr_sources(log_minimal.c)

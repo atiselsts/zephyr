@@ -7,6 +7,7 @@
 /dts-v1/;
 #include <st/f7/stm32f769Xi.dtsi>
 #include <st/f7/stm32f769nihx-pinctrl.dtsi>
+#include "arduino_r3_connector.dtsi"
 
 / {
 	model = "STMicroelectronics STM32F769I DISCOVERY board";
@@ -58,6 +59,28 @@
 	};
 };
 
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(25)>;
+	status = "okay";
+};
+
+&pll {
+	div-m = <25>;
+	mul-n = <432>;
+	div-p = <2>;
+	div-q = <9>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(216)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <4>;
+	apb2-prescaler = <2>;
+};
+
 arduino_i2c: &i2c1 {};
 arduino_spi: &spi2 {};
 arduino_serial: &usart6 {};
@@ -81,7 +104,7 @@ arduino_serial: &usart6 {};
 };
 
 &spi2 {
-	pinctrl-0 = <&spi2_sck_pa12 &spi2_miso_pb14 &spi2_mosi_pb15>;
+	pinctrl-0 = <&spi2_nss_pa11 &spi2_sck_pa12 &spi2_miso_pb14 &spi2_mosi_pb15>;
 	status = "okay";
 };
 

@@ -14,6 +14,9 @@
 
 	chosen {
 		zephyr,sram = &sram0;
+		zephyr,console = &scif1;
+		zephyr,shell-uart = &scif1;
+		zephyr,can-primary = &can0;
 	};
 
 	leds {
@@ -44,5 +47,21 @@
 };
 
 &gpio6 {
+	status = "okay";
+};
+
+&can0 {
+	status = "okay";
+};
+
+&scif1 {
+	status = "okay";
+};
+
+&i2c2 {
+	status = "okay";
+};
+
+&i2c4 {
 	status = "okay";
 };

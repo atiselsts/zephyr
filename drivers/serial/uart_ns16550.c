@@ -360,7 +360,7 @@ static int uart_ns16550_configure(const struct device *dev,
 			goto out;
 		}
 
-		pcie_get_mbar(dev_cfg->pcie_bdf, 0, &mbar);
+		pcie_probe_mbar(dev_cfg->pcie_bdf, 0, &mbar);
 		pcie_set_cmd(dev_cfg->pcie_bdf, PCIE_CONF_CMDSTAT_MEM, true);
 
 		device_map(DEVICE_MMIO_RAM_PTR(dev), mbar.phys_addr, mbar.size,
@@ -479,6 +479,7 @@ out:
 	return ret;
 };
 
+#ifdef CONFIG_UART_USE_RUNTIME_CONFIGURE
 static int uart_ns16550_config_get(const struct device *dev,
 				   struct uart_config *cfg)
 {
@@ -492,6 +493,7 @@ static int uart_ns16550_config_get(const struct device *dev,
 
 	return 0;
 }
+#endif /* CONFIG_UART_USE_RUNTIME_CONFIGURE */
 
 /**
  * @brief Initialize individual UART port
@@ -949,8 +951,10 @@ static const struct uart_driver_api uart_ns16550_driver_api = {
 	.poll_in = uart_ns16550_poll_in,
 	.poll_out = uart_ns16550_poll_out,
 	.err_check = uart_ns16550_err_check,
+#ifdef CONFIG_UART_USE_RUNTIME_CONFIGURE
 	.configure = uart_ns16550_configure,
 	.config_get = uart_ns16550_config_get,
+#endif
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
 
 	.fifo_fill = uart_ns16550_fifo_fill,
@@ -1088,7 +1092,7 @@ static const struct uart_driver_api uart_ns16550_driver_api = {
 		.uart_config.flow_ctrl = DEV_DATA_FLOW_CTRL(n),                      \
 		DEV_DATA_DLF_INIT(n)                                                 \
 	};                                                                           \
-	DEVICE_DT_INST_DEFINE(n, &uart_ns16550_init, device_pm_control_nop,          \
+	DEVICE_DT_INST_DEFINE(n, &uart_ns16550_init, NULL,                           \
 			      &uart_ns16550_dev_data_##n, &uart_ns16550_dev_cfg_##n, \
 			      PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,      \
 			      &uart_ns16550_driver_api);                             \

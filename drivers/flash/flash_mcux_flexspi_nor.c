@@ -349,7 +349,11 @@ static int flash_flexspi_nor_write(const struct device *dev, off_t offset,
 	}
 
 	while (len) {
-		i = MIN(SPI_NOR_PAGE_SIZE, len);
+		/* If the offset isn't a multiple of the NOR page size, we first need
+		 * to write the remaining part that fits, otherwise the write could
+		 * be wrapped around within the same page
+		 */
+		i = MIN(SPI_NOR_PAGE_SIZE - (offset % SPI_NOR_PAGE_SIZE), len);
 #ifdef CONFIG_FLASH_MCUX_FLEXSPI_NOR_WRITE_BUFFER
 		memcpy(nor_write_buf, src, i);
 #endif
@@ -555,7 +559,7 @@ static const struct flash_driver_api flash_flexspi_nor_api = {
 									\
 	DEVICE_DT_INST_DEFINE(n,					\
 			      flash_flexspi_nor_init,			\
-			      device_pm_control_nop,			\
+			      NULL,					\
 			      &flash_flexspi_nor_data_##n,		\
 			      &flash_flexspi_nor_config_##n,		\
 			      POST_KERNEL,				\

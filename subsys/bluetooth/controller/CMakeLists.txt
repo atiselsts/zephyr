@@ -19,7 +19,17 @@ zephyr_library_sources_ifdef(
   )
 
 if(CONFIG_BT_LL_SW_SPLIT)
+  if(CONFIG_BT_CTLR_ADVANCED_FEATURES)
+    message(WARNING "\nCONFIG_BT_CTLR_ADVANCED_FEATURES=y, Advanced Features' "
+		    "default value change could change Zephyr Bluetooth "
+		    "Controller's functional behavior.")
+  endif()
+  if(CONFIG_BT_CTLR_ADV_EXT)
+    message(WARNING "\nCONFIG_BT_CTLR_ADV_EXT=y, Advertising Extensions "
+		    "Feature in Zephyr Bluetooth Controller is EXPERIMENTAL.")
+  endif()
   zephyr_library_sources(
+    ll_sw/ll_feat.c
     ll_sw/ull.c
     ll_sw/lll_common.c
     )
@@ -85,12 +95,11 @@ if(CONFIG_BT_LL_SW_SPLIT)
       )
     endif()
   endif()
-  if(CONFIG_BT_CTLR_SET_HOST_FEATURE)
+  if(CONFIG_BT_CTLR_DF)
     zephyr_library_sources(
-      ll_sw/ll_feat.c
+      ll_sw/ull_df.c
       )
   endif()
-
   if(CONFIG_BT_CTLR_CONN_ISO)
     zephyr_library_sources(
       ll_sw/ull_conn_iso.c
@@ -108,11 +117,6 @@ if(CONFIG_BT_LL_SW_SPLIT)
     zephyr_library_sources(
       ll_sw/ull_chan.c
       ll_sw/lll_chan.c
-      )
-  endif()
-  if(CONFIG_BT_CTLR_DF)
-    zephyr_library_sources(
-      ll_sw/ull_df.c
       )
   endif()
   zephyr_library_sources_ifdef(

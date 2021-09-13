@@ -338,6 +338,15 @@ struct bt_uuid_128 {
  */
 #define BT_UUID_HIDS \
 	BT_UUID_DECLARE_16(BT_UUID_HIDS_VAL)
+/** @def BT_UUID_RSCS_VAL
+ *  @brief Running Speed and Cadence Service UUID value
+ */
+#define BT_UUID_RSCS_VAL 0x1814
+/** @def BT_UUID_RSCS
+ *  @brief Running Speed and Cadence Service
+ */
+#define BT_UUID_RSCS \
+	BT_UUID_DECLARE_16(BT_UUID_RSCS_VAL)
 /** @def BT_UUID_CSC_VAL
  *  @brief Cycling Speed and Cadence Service UUID value
  */
@@ -419,6 +428,15 @@ struct bt_uuid_128 {
  */
 #define BT_UUID_AICS \
 	BT_UUID_DECLARE_16(BT_UUID_AICS_VAL)
+/** @def BT_UUID_VCS_VAL
+ *  @brief Volume Control Service value
+ */
+#define BT_UUID_VCS_VAL 0x1844
+/** @def BT_UUID_VCS
+ *  @brief Volume Control Service
+ */
+#define BT_UUID_VCS \
+	BT_UUID_DECLARE_16(BT_UUID_VCS_VAL)
 /** @def BT_UUID_VOCS_VAL
  *  @brief Volume Offset Control Service value
  */
@@ -428,6 +446,15 @@ struct bt_uuid_128 {
  */
 #define BT_UUID_VOCS \
 	BT_UUID_DECLARE_16(BT_UUID_VOCS_VAL)
+/** @def BT_UUID_MICS_VAL
+ *  @brief Microphone Input Control Service value
+ */
+#define BT_UUID_MICS_VAL 0x184D
+/** @def BT_UUID_MICS
+ *  @brief Microphone Input Control Service
+ */
+#define BT_UUID_MICS \
+	BT_UUID_DECLARE_16(BT_UUID_MICS_VAL)
 /** @def BT_UUID_GATT_PRIMARY_VAL
  *  @brief GATT Primary Service UUID value
  */
@@ -834,6 +861,24 @@ struct bt_uuid_128 {
  */
 #define BT_UUID_HIDS_PROTOCOL_MODE \
 	BT_UUID_DECLARE_16(BT_UUID_HIDS_PROTOCOL_MODE_VAL)
+/** @def BT_UUID_RSC_MEASUREMENT_VAL
+ *  @brief RSC Measurement Characteristic UUID value
+ */
+#define BT_UUID_RSC_MEASUREMENT_VAL 0x2a53
+/** @def BT_UUID_RSC_MEASUREMENT
+ *  @brief RSC Measurement Characteristic
+ */
+#define BT_UUID_RSC_MEASUREMENT \
+	BT_UUID_DECLARE_16(BT_UUID_RSC_MEASUREMENT_VAL)
+/** @def BT_UUID_RSC_FEATURE_VAL
+ *  @brief RSC Feature Characteristic UUID value
+ */
+#define BT_UUID_RSC_FEATURE_VAL 0x2a54
+/** @def BT_UUID_RSC_FEATURE
+ *  @brief RSC Feature Characteristic
+ */
+#define BT_UUID_RSC_FEATURE \
+	BT_UUID_DECLARE_16(BT_UUID_RSC_FEATURE_VAL)
 /** @def BT_UUID_CSC_MEASUREMENT_VAL
  *  @brief CSC Measurement Characteristic UUID value
  */
@@ -1376,6 +1421,33 @@ struct bt_uuid_128 {
  */
 #define BT_UUID_AICS_DESCRIPTION \
 	BT_UUID_DECLARE_16(BT_UUID_AICS_DESCRIPTION_VAL)
+/** @def BT_UUID_VCS_STATE_VAL
+ *  @brief Volume Control Setting value
+ */
+#define BT_UUID_VCS_STATE_VAL 0x2B7D
+/** @def BT_UUID_VCS_STATE
+ *  @brief Volume Control Setting
+ */
+#define BT_UUID_VCS_STATE \
+	BT_UUID_DECLARE_16(BT_UUID_VCS_STATE_VAL)
+/** @def BT_UUID_VCS_CONTROL_VAL
+ *  @brief Volume Control Control point value
+ */
+#define BT_UUID_VCS_CONTROL_VAL 0x2B7E
+/** @def BT_UUID_VCS_CONTROL
+ *  @brief Volume Control Control point
+ */
+#define BT_UUID_VCS_CONTROL \
+	BT_UUID_DECLARE_16(BT_UUID_VCS_CONTROL_VAL)
+/** @def BT_UUID_VCS_FLAGS_VAL
+ *  @brief Volume Control Flags value
+ */
+#define BT_UUID_VCS_FLAGS_VAL 0x2B7F
+/** @def BT_UUID_VCS_FLAGS
+ *  @brief Volume Control Flags
+ */
+#define BT_UUID_VCS_FLAGS \
+	BT_UUID_DECLARE_16(BT_UUID_VCS_FLAGS_VAL)
 /** @def BT_UUID_VOCS_STATE_VAL
  *  @brief Volume Offset State value
  */
@@ -1412,6 +1484,15 @@ struct bt_uuid_128 {
  */
 #define BT_UUID_VOCS_DESCRIPTION \
 	BT_UUID_DECLARE_16(BT_UUID_VOCS_DESCRIPTION_VAL)
+/** @def BT_UUID_MICS_MUTE_VAL
+ *  @brief Microphone Input Control Service Mute value
+ */
+#define BT_UUID_MICS_MUTE_VAL 0x2BC3
+/** @def BT_UUID_MICS_MUTE
+ *  @brief Microphone Input Control Service Mute
+ */
+#define BT_UUID_MICS_MUTE \
+	BT_UUID_DECLARE_16(BT_UUID_MICS_MUTE_VAL)
 /*
  * Protocol UUIDs
  */

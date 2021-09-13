@@ -24,9 +24,6 @@ LOG_MODULE_REGISTER(qdec_nrfx, CONFIG_SENSOR_LOG_LEVEL);
 struct qdec_nrfx_data {
 	int32_t                    acc;
 	sensor_trigger_handler_t data_ready_handler;
-#ifdef CONFIG_PM_DEVICE
-	uint32_t                    pm_state;
-#endif
 };
 
 
@@ -206,96 +203,33 @@ static int qdec_nrfx_init(const struct device *dev)
 	qdec_nrfx_gpio_ctrl(true);
 	nrfx_qdec_enable();
 
-#ifdef CONFIG_PM_DEVICE
-	struct qdec_nrfx_data *data = &qdec_nrfx_data;
-
-	data->pm_state = DEVICE_PM_ACTIVE_STATE;
-#endif
-
 	return 0;
 }
 
 #ifdef CONFIG_PM_DEVICE
-
-static int qdec_nrfx_pm_get_state(struct qdec_nrfx_data *data,
-				  uint32_t                 *state)
+static int qdec_nrfx_pm_control(struct qdec_nrfx_data *data,
+				enum pm_device_action action)
 {
-	unsigned int key = irq_lock();
-	*state = data->pm_state;
-	irq_unlock(key);
-
-	return 0;
-}
-
-static int qdec_nrfx_pm_set_state(struct qdec_nrfx_data *data,
-				  uint32_t                  new_state)
-{
-	uint32_t old_state;
-	unsigned int key;
-
-	key = irq_lock();
-	old_state = data->pm_state;
-	irq_unlock(key);
-
-	if (old_state == new_state) {
-		/* leave unchanged */
-		return 0;
-	}
-
-	if (old_state == DEVICE_PM_ACTIVE_STATE) {
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		qdec_nrfx_gpio_ctrl(true);
+		nrfx_qdec_enable();
+		break;
+	case PM_DEVICE_ACTION_TURN_OFF:
+		/* device must be uninitialized */
+		nrfx_qdec_uninit();
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
 		/* device must be suspended */
 		nrfx_qdec_disable();
 		qdec_nrfx_gpio_ctrl(false);
+		break;
+	default:
+		return -ENOTSUP;
 	}
-
-	if (new_state == DEVICE_PM_OFF_STATE) {
-		/* device must be uninitialized */
-		nrfx_qdec_uninit();
-	}
-
-	if (new_state == DEVICE_PM_ACTIVE_STATE) {
-		qdec_nrfx_gpio_ctrl(true);
-		nrfx_qdec_enable();
-	}
-
-	/* record the new state */
-	key = irq_lock();
-	data->pm_state = new_state;
-	irq_unlock(key);
 
 	return 0;
 }
-
-static int qdec_nrfx_pm_control(const struct device *dev,
-				uint32_t ctrl_command,
-				void *context, device_pm_cb cb, void *arg)
-{
-	struct qdec_nrfx_data *data = &qdec_nrfx_data;
-	int err;
-
-	LOG_DBG("");
-
-	switch (ctrl_command) {
-	case DEVICE_PM_GET_POWER_STATE:
-		err = qdec_nrfx_pm_get_state(data, context);
-		break;
-
-	case DEVICE_PM_SET_POWER_STATE:
-		err = qdec_nrfx_pm_set_state(data, *((uint32_t *)context));
-		break;
-
-	default:
-		err = -ENOTSUP;
-		break;
-	}
-
-	if (cb) {
-		cb(dev, err, context, arg);
-	}
-
-	return err;
-}
-
 #endif /* CONFIG_PM_DEVICE */
 
 

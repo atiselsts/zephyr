@@ -139,9 +139,6 @@ enum {
 
 /* SMP channel specific context */
 struct bt_smp {
-	/* The channel this context is associated with */
-	struct bt_l2cap_le_chan		chan;
-
 	/* Commands that remote is allowed to send */
 	ATOMIC_DEFINE(allowed_cmds, BT_SMP_NUM_CMDS);
 
@@ -170,10 +167,10 @@ struct bt_smp {
 	uint8_t				tk[16];
 
 	/* Remote Public Key for LE SC */
-	uint8_t				pkey[64];
+	uint8_t				pkey[BT_PUB_KEY_LEN];
 
 	/* DHKey */
-	uint8_t				dhkey[32];
+	uint8_t				dhkey[BT_DH_KEY_LEN];
 
 	/* Remote DHKey check */
 	uint8_t				e[16];
@@ -199,8 +196,14 @@ struct bt_smp {
 	/* Remote key distribution */
 	uint8_t				remote_dist;
 
+	/* The channel this context is associated with.
+	 * This marks the beginning of the part of the structure that will not
+	 * be memset to zero in init.
+	 */
+	struct bt_l2cap_le_chan		chan;
+
 	/* Delayed work for timeout handling */
-	struct k_delayed_work		work;
+	struct k_work_delayable		work;
 };
 
 static unsigned int fixed_passkey = BT_PASSKEY_INVALID;
@@ -239,9 +242,6 @@ static const uint8_t gen_method_sc[5 /* remote */][5 /* local */] = {
 #if defined(CONFIG_BT_BREDR)
 /* SMP over BR/EDR channel specific context */
 struct bt_smp_br {
-	/* The channel this context is associated with */
-	struct bt_l2cap_br_chan	chan;
-
 	/* Commands that remote is allowed to send */
 	ATOMIC_DEFINE(allowed_cmds, BT_SMP_NUM_CMDS);
 
@@ -257,8 +257,14 @@ struct bt_smp_br {
 	/* Encryption Key Size used for connection */
 	uint8_t 			enc_key_size;
 
+	/* The channel this context is associated with.
+	 * This marks the beginning of the part of the structure that will not
+	 * be memset to zero in init.
+	 */
+	struct bt_l2cap_br_chan	chan;
+
 	/* Delayed work for timeout handling */
-	struct k_delayed_work 	work;
+	struct k_work_delayable	work;
 };
 
 static struct bt_smp_br bt_smp_br_pool[CONFIG_BT_MAX_CONN];
@@ -956,9 +962,17 @@ static void sc_derive_link_key(struct bt_smp *smp)
 
 static void smp_br_reset(struct bt_smp_br *smp)
 {
-	k_delayed_work_cancel(&smp->work);
-
+	/* Clear flags first in case canceling of timeout fails. The SMP context
+	 * shall be marked as timed out in that case.
+	 */
 	atomic_set(smp->flags, 0);
+
+	/* If canceling fails the timeout handler will set the timeout flag and
+	 * mark the it as timed out. No new pairing procedures shall be started
+	 * on this connection if that happens.
+	 */
+	(void)k_work_cancel_delayable(&smp->work);
+
 	atomic_set(smp->allowed_cmds, 0);
 
 	atomic_set_bit(smp->allowed_cmds, BT_SMP_CMD_PAIRING_REQ);
@@ -1017,9 +1031,12 @@ static void smp_br_timeout(struct k_work *work)
 static void smp_br_send(struct bt_smp_br *smp, struct net_buf *buf,
 			bt_conn_tx_cb_t cb)
 {
-	bt_l2cap_send_cb(smp->chan.chan.conn, BT_L2CAP_CID_BR_SMP, buf, cb,
-			 NULL);
-	k_delayed_work_submit(&smp->work, SMP_TIMEOUT);
+	if (bt_l2cap_send_cb(smp->chan.chan.conn, BT_L2CAP_CID_BR_SMP, buf, cb, NULL)) {
+		net_buf_unref(buf);
+		return;
+	}
+
+	k_work_reschedule(&smp->work, SMP_TIMEOUT);
 }
 
 static void bt_smp_br_connected(struct bt_l2cap_chan *chan)
@@ -1047,16 +1064,20 @@ static void bt_smp_br_disconnected(struct bt_l2cap_chan *chan)
 	BT_DBG("chan %p cid 0x%04x", chan,
 	       CONTAINER_OF(chan, struct bt_l2cap_br_chan, chan)->tx.cid);
 
-	k_delayed_work_cancel(&smp->work);
+	/* Channel disconnected callback is always called from a work handler
+	 * so canceling of the timeout work should always succeed.
+	 */
+	(void)k_work_cancel_delayable(&smp->work);
 
 	(void)memset(smp, 0, sizeof(*smp));
 }
 
 static void smp_br_init(struct bt_smp_br *smp)
 {
-	/* Initialize SMP context without clearing L2CAP channel context */
-	(void)memset((uint8_t *)smp + sizeof(smp->chan), 0,
-		     sizeof(*smp) - (sizeof(smp->chan) + sizeof(smp->work)));
+	/* Initialize SMP context exluding L2CAP channel context and anything
+	 * else declared after.
+	 */
+	(void)memset(smp, 0, offsetof(struct bt_smp_br, chan));
 
 	atomic_set_bit(smp->allowed_cmds, BT_SMP_CMD_PAIRING_FAIL);
 }
@@ -1575,7 +1596,9 @@ static int smp_br_error(struct bt_smp_br *smp, uint8_t reason)
 	 * SMP timer is not restarted for PairingFailed so don't use
 	 * smp_br_send
 	 */
-	bt_l2cap_send(smp->chan.chan.conn, BT_L2CAP_CID_SMP, buf);
+	if (bt_l2cap_send(smp->chan.chan.conn, BT_L2CAP_CID_SMP, buf)) {
+		net_buf_unref(buf);
+	}
 
 	return 0;
 }
@@ -1669,7 +1692,7 @@ static int bt_smp_br_accept(struct bt_conn *conn, struct bt_l2cap_chan **chan)
 
 		*chan = &smp->chan.chan;
 
-		k_delayed_work_init(&smp->work, smp_br_timeout);
+		k_work_init_delayable(&smp->work, smp_br_timeout);
 		smp_br_reset(smp);
 
 		return 0;
@@ -1773,11 +1796,19 @@ static void smp_reset(struct bt_smp *smp)
 {
 	struct bt_conn *conn = smp->chan.chan.conn;
 
-	k_delayed_work_cancel(&smp->work);
+	/* Clear flags first in case canceling of timeout fails. The SMP context
+	 * shall be marked as timed out in that case.
+	 */
+	atomic_set(smp->flags, 0);
+
+	/* If canceling fails the timeout handler will set the timeout flag and
+	 * mark the it as timed out. No new pairing procedures shall be started
+	 * on this connection if that happens.
+	 */
+	(void)k_work_cancel_delayable(&smp->work);
 
 	smp->method = JUST_WORKS;
 	atomic_set(smp->allowed_cmds, 0);
-	atomic_set(smp->flags, 0);
 
 	if (IS_ENABLED(CONFIG_BT_CENTRAL) &&
 	    conn->role == BT_HCI_ROLE_MASTER) {
@@ -1864,7 +1895,11 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 						 security_err);
 		}
 
-		if (bt_auth && bt_auth->pairing_failed) {
+		/* Check SMP_FLAG_PAIRING as bt_conn_security_changed may
+		 * have called the pairing_failed callback already.
+		 */
+		if (atomic_test_bit(smp->flags, SMP_FLAG_PAIRING) &&
+		    bt_auth && bt_auth->pairing_failed) {
 			bt_auth->pairing_failed(conn, security_err);
 		}
 	}
@@ -1893,8 +1928,12 @@ static void smp_timeout(struct k_work *work)
 static void smp_send(struct bt_smp *smp, struct net_buf *buf,
 		     bt_conn_tx_cb_t cb, void *user_data)
 {
-	bt_l2cap_send_cb(smp->chan.chan.conn, BT_L2CAP_CID_SMP, buf, cb, NULL);
-	k_delayed_work_submit(&smp->work, SMP_TIMEOUT);
+	if (bt_l2cap_send_cb(smp->chan.chan.conn, BT_L2CAP_CID_SMP, buf, cb, NULL)) {
+		net_buf_unref(buf);
+		return;
+	}
+
+	k_work_reschedule(&smp->work, SMP_TIMEOUT);
 }
 
 static int smp_error(struct bt_smp *smp, uint8_t reason)
@@ -1918,7 +1957,9 @@ static int smp_error(struct bt_smp *smp, uint8_t reason)
 	rsp->reason = reason;
 
 	/* SMP timer is not restarted for PairingFailed so don't use smp_send */
-	bt_l2cap_send(smp->chan.chan.conn, BT_L2CAP_CID_SMP, buf);
+	if (bt_l2cap_send(smp->chan.chan.conn, BT_L2CAP_CID_SMP, buf)) {
+		net_buf_unref(buf);
+	}
 
 	return 0;
 }
@@ -2591,9 +2632,9 @@ static uint8_t smp_master_ident(struct bt_smp *smp, struct net_buf *buf)
 
 		memcpy(keys->ltk.ediv, req->ediv, sizeof(keys->ltk.ediv));
 		memcpy(keys->ltk.rand, req->rand, sizeof(req->rand));
-
-		smp->remote_dist &= ~BT_SMP_DIST_ENC_KEY;
 	}
+
+	smp->remote_dist &= ~BT_SMP_DIST_ENC_KEY;
 
 	if (smp->remote_dist & BT_SMP_DIST_ID_KEY) {
 		atomic_set_bit(smp->allowed_cmds, BT_SMP_CMD_IDENT_INFO);
@@ -2663,9 +2704,10 @@ static uint8_t smp_master_ident(struct bt_smp *smp, struct net_buf *buf)
 
 static int smp_init(struct bt_smp *smp)
 {
-	/* Initialize SMP context without clearing L2CAP channel context */
-	(void)memset((uint8_t *)smp + sizeof(smp->chan), 0,
-		     sizeof(*smp) - (sizeof(smp->chan) + sizeof(smp->work)));
+	/* Initialize SMP context exluding L2CAP channel context and anything
+	 * else declared after.
+	 */
+	(void)memset(smp, 0, offsetof(struct bt_smp, chan));
 
 	/* Generate local random number */
 	if (bt_rand(smp->prnd, 16)) {
@@ -2875,6 +2917,7 @@ static int smp_send_security_req(struct bt_conn *conn)
 	struct bt_smp *smp;
 	struct bt_smp_security_request *req;
 	struct net_buf *req_buf;
+	int err;
 
 	BT_DBG("");
 	smp = smp_chan_get(conn);
@@ -2922,7 +2965,11 @@ static int smp_send_security_req(struct bt_conn *conn)
 	req->auth_req = get_auth(conn, BT_SMP_AUTH_DEFAULT);
 
 	/* SMP timer is not restarted for SecRequest so don't use smp_send */
-	bt_l2cap_send(conn, BT_L2CAP_CID_SMP, req_buf);
+	err = bt_l2cap_send(conn, BT_L2CAP_CID_SMP, req_buf);
+	if (err) {
+		net_buf_unref(req_buf);
+		return err;
+	}
 
 	atomic_set_bit(smp->flags, SMP_FLAG_SEC_REQ);
 	atomic_set_bit(smp->allowed_cmds, BT_SMP_CMD_PAIRING_REQ);
@@ -3477,7 +3524,7 @@ static uint8_t smp_dhkey_ready(struct bt_smp *smp, const uint8_t *dhkey)
 	}
 
 	atomic_clear_bit(smp->flags, SMP_FLAG_DHKEY_PENDING);
-	memcpy(smp->dhkey, dhkey, 32);
+	memcpy(smp->dhkey, dhkey, BT_DH_KEY_LEN);
 
 	/* wait for user passkey confirmation */
 	if (atomic_test_bit(smp->flags, SMP_FLAG_USER)) {
@@ -4116,8 +4163,11 @@ static uint8_t smp_public_key_slave(struct bt_smp *smp)
 	uint8_t err;
 
 	if (!atomic_test_bit(smp->flags, SMP_FLAG_SC_DEBUG_KEY) &&
-	    memcmp(smp->pkey, sc_public_key, 64) == 0) {
-		BT_WARN("Remote is using identical public key");
+	    memcmp(smp->pkey, sc_public_key, BT_PUB_KEY_COORD_LEN) == 0) {
+		/* Deny public key with identitcal X coordinate unless it is the
+		 * debug public key.
+		 */
+		BT_WARN("Remote public key rejected");
 		return BT_SMP_ERR_UNSPECIFIED;
 	}
 
@@ -4170,8 +4220,8 @@ static uint8_t smp_public_key(struct bt_smp *smp, struct net_buf *buf)
 
 	BT_DBG("");
 
-	memcpy(smp->pkey, req->x, 32);
-	memcpy(&smp->pkey[32], req->y, 32);
+	memcpy(smp->pkey, req->x, BT_PUB_KEY_COORD_LEN);
+	memcpy(&smp->pkey[BT_PUB_KEY_COORD_LEN], req->y, BT_PUB_KEY_COORD_LEN);
 
 	/* mark key as debug if remote is using it */
 	if (bt_pub_key_is_debug(smp->pkey)) {
@@ -4189,8 +4239,11 @@ static uint8_t smp_public_key(struct bt_smp *smp, struct net_buf *buf)
 	if (IS_ENABLED(CONFIG_BT_CENTRAL) &&
 	    smp->chan.chan.conn->role == BT_HCI_ROLE_MASTER) {
 		if (!atomic_test_bit(smp->flags, SMP_FLAG_SC_DEBUG_KEY) &&
-		    memcmp(smp->pkey, sc_public_key, 64) == 0) {
-			BT_WARN("Remote is using identical public key");
+		    memcmp(smp->pkey, sc_public_key, BT_PUB_KEY_COORD_LEN) == 0) {
+			/* Deny public key with identitcal X coordinate unless
+			 * it is the debug public key.
+			 */
+			BT_WARN("Remote public key rejected");
 			return BT_SMP_ERR_UNSPECIFIED;
 		}
 
@@ -4513,7 +4566,7 @@ static void bt_smp_connected(struct bt_l2cap_chan *chan)
 	BT_DBG("chan %p cid 0x%04x", chan,
 	       CONTAINER_OF(chan, struct bt_l2cap_le_chan, chan)->tx.cid);
 
-	k_delayed_work_init(&smp->work, smp_timeout);
+	k_work_init_delayable(&smp->work, smp_timeout);
 	smp_reset(smp);
 }
 
@@ -4525,7 +4578,10 @@ static void bt_smp_disconnected(struct bt_l2cap_chan *chan)
 	BT_DBG("chan %p cid 0x%04x", chan,
 	       CONTAINER_OF(chan, struct bt_l2cap_le_chan, chan)->tx.cid);
 
-	k_delayed_work_cancel(&smp->work);
+	/* Channel disconnected callback is always called from a work handler
+	 * so canceling of the timeout work should always succeed.
+	 */
+	(void)k_work_cancel_delayable(&smp->work);
 
 	if (atomic_test_bit(smp->flags, SMP_FLAG_PAIRING) ||
 	    atomic_test_bit(smp->flags, SMP_FLAG_ENC_PENDING) ||
@@ -5587,10 +5643,6 @@ int bt_smp_start_security(struct bt_conn *conn)
 			return -ENOTCONN;
 		}
 
-		if (!smp_keys_check(conn)) {
-			return smp_send_pairing_req(conn);
-		}
-
 		/* pairing is in progress */
 		if (atomic_test_bit(smp->flags, SMP_FLAG_PAIRING)) {
 			return -EBUSY;
@@ -5599,6 +5651,10 @@ int bt_smp_start_security(struct bt_conn *conn)
 		/* Encryption is in progress */
 		if (atomic_test_bit(smp->flags, SMP_FLAG_ENC_PENDING)) {
 			return -EBUSY;
+		}
+
+		if (!smp_keys_check(conn)) {
+			return smp_send_pairing_req(conn);
 		}
 
 		/* LE SC LTK and legacy master LTK are stored in same place */
