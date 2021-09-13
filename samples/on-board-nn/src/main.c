@@ -16,7 +16,8 @@ void classify(void)
     }
     int64_t delta = k_uptime_delta(&start);
 
-    printk("for %u tests: %lld ms (result=%d)\n", NUM_TESTS, delta, dummy);
+    printk("for %u tests: ", NUM_TESTS);
+    printk("%lld ms (result=%d)\n", delta, dummy);
 }
 
 void main(void)
