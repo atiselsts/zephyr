@@ -1,1 +1,1 @@
-/home/atis/work/on-board/cnn/exported-nn-256.c
+/home/atis/work/on-board/cnn/newmodels/nn-custom-128-64-3-8.c

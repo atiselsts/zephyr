@@ -4,7 +4,7 @@
 
 #include "nn.h"
 
-#define NUM_TESTS 10
+#define NUM_TESTS 100
 
 void classify(void)
 {
