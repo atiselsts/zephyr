@@ -1,0 +1,23 @@
+/*
+Didzis setup:
+CS:   P1.08
+SCLK: P1.06
+MOSI:  P1.04
+MISO:  P0.21
+INT:   P0.22
+*/
+&spi0 {
+	compatible = "nordic,nrf-spi";
+	status = "okay";
+	sck-pin = <38>; /* Port 1, pin 6 */
+	mosi-pin = <36>; /* Port 1, pin 4 */
+	miso-pin = <21>; /* Port 0, pin 21 */
+	cs-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>; /* Port 1, pin 8 */
+	icm20948@0 {
+		compatible = "invensense,icm20948";
+		spi-max-frequency = <1000000>;
+		reg = <0>;
+		label = "ICM20948";
+		int-gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>; /* Port 0, pin 22 */
+	};
+};
