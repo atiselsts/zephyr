@@ -6,8 +6,8 @@ MOSI:  P1.04
 MISO:  P0.21
 INT:   P0.22
 */
-&spi0 {
-	compatible = "nordic,nrf-spi";
+&spi1 {
+	compatible = "nordic,nrf-spim";
 	status = "okay";
 	sck-pin = <38>; /* Port 1, pin 6 */
 	mosi-pin = <36>; /* Port 1, pin 4 */

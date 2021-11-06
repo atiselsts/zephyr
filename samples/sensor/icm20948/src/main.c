@@ -26,7 +26,7 @@ static const char *now_str(void)
 
 static int process_icm20948(const struct device *dev)
 {
-	struct sensor_value temperature;
+//	struct sensor_value temperature;
 	struct sensor_value accel[3];
 	int rc = sensor_sample_fetch(dev);
 
@@ -58,10 +58,10 @@ static int process_icm20948(const struct device *dev)
 
 static struct sensor_trigger data_trigger;
 
-static void handle_icm42605_drdy(const struct device *dev,
+static void handle_icm20948_drdy(const struct device *dev,
 				 struct sensor_trigger *trig)
 {
-	int rc = process_icm42605(dev);
+	int rc = process_icm20948(dev);
 
 	if (rc != 0) {
 		printf("cancelling trigger due to failure: %d\n", rc);
@@ -70,13 +70,13 @@ static void handle_icm42605_drdy(const struct device *dev,
 	}
 }
 
-/* static void handle_icm42605_tap(const struct device *dev, */
+/* static void handle_icm20948_tap(const struct device *dev, */
 /* 				 struct sensor_trigger *trig) */
 /* { */
 /* 	printf("Tap Detected!\n"); */
 /* } */
 
-/* static void handle_icm42605_double_tap(const struct device *dev, */
+/* static void handle_icm20948_double_tap(const struct device *dev, */
 /* 				 struct sensor_trigger *trig) */
 /* { */
 /* 	printf("Double Tap detected!\n"); */
@@ -97,8 +97,8 @@ void main(void)
 	/* 	.chan = SENSOR_CHAN_ALL, */
 	/* }; */
 
-	/* if (sensor_trigger_set(icm42605, &tap_trigger, */
-	/* 		       handle_icm42605_tap) < 0) { */
+	/* if (sensor_trigger_set(icm20948, &tap_trigger, */
+	/* 		       handle_icm20948_tap) < 0) { */
 	/* 	printf("Cannot configure tap trigger!!!\n"); */
 	/* 	return; */
 	/* } */
@@ -108,8 +108,8 @@ void main(void)
 	/* 	.chan = SENSOR_CHAN_ALL, */
 	/* }; */
 
-	/* if (sensor_trigger_set(icm42605, &double_tap_trigger, */
-	/* 		       handle_icm42605_double_tap) < 0) { */
+	/* if (sensor_trigger_set(icm20948, &double_tap_trigger, */
+	/* 		       handle_icm20948_double_tap) < 0) { */
 	/* 	printf("Cannot configure double tap trigger!!!\n"); */
 	/* 	return; */
 	/* } */
@@ -119,8 +119,8 @@ void main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
-	if (sensor_trigger_set(icm42605, &data_trigger,
-			       handle_icm42605_drdy) < 0) {
+	if (sensor_trigger_set(icm20948, &data_trigger,
+			       handle_icm20948_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return;
 	}
