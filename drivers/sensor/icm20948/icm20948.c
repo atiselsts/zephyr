@@ -19,50 +19,50 @@
 
 LOG_MODULE_REGISTER(ICM20948, CONFIG_SENSOR_LOG_LEVEL);
 
-static const uint16_t icm20948_gyro_sensitivity_x10[] = {
-	1310, 655, 328, 164
-};
+/* static const uint16_t icm20948_gyro_sensitivity_x10[] = { */
+/* 	1310, 655, 328, 164 */
+/* }; */
 
 /* see "Accelerometer Measurements" section from register map description */
-static void icm20948_convert_accel(struct sensor_value *val,
-				   int16_t raw_val,
-				   uint16_t sensitivity_shift)
-{
-	int64_t conv_val;
+/* static void icm20948_convert_accel(struct sensor_value *val, */
+/* 				   int16_t raw_val, */
+/* 				   uint16_t sensitivity_shift) */
+/* { */
+/* 	int64_t conv_val; */
 
-	conv_val = ((int64_t)raw_val * SENSOR_G) >> sensitivity_shift;
-	val->val1 = conv_val / 1000000;
-	val->val2 = conv_val % 1000000;
-}
+/* 	conv_val = ((int64_t)raw_val * SENSOR_G) >> sensitivity_shift; */
+/* 	val->val1 = conv_val / 1000000; */
+/* 	val->val2 = conv_val % 1000000; */
+/* } */
 
-/* see "Gyroscope Measurements" section from register map description */
-static void icm20948_convert_gyro(struct sensor_value *val,
-				  int16_t raw_val,
-				  uint16_t sensitivity_x10)
-{
-	int64_t conv_val;
+/* /\* see "Gyroscope Measurements" section from register map description *\/ */
+/* static void icm20948_convert_gyro(struct sensor_value *val, */
+/* 				  int16_t raw_val, */
+/* 				  uint16_t sensitivity_x10) */
+/* { */
+/* 	int64_t conv_val; */
 
-	conv_val = ((int64_t)raw_val * SENSOR_PI * 10) /
-		   (sensitivity_x10 * 180U);
-	val->val1 = conv_val / 1000000;
-	val->val2 = conv_val % 1000000;
-}
+/* 	conv_val = ((int64_t)raw_val * SENSOR_PI * 10) / */
+/* 		   (sensitivity_x10 * 180U); */
+/* 	val->val1 = conv_val / 1000000; */
+/* 	val->val2 = conv_val % 1000000; */
+/* } */
 
-/* see "Temperature Measurement" section from register map description */
-static inline void icm20948_convert_temp(struct sensor_value *val,
-					 int16_t raw_val)
-{
-	val->val1 = (((int64_t)raw_val * 100) / 207) + 25;
-	val->val2 = ((((int64_t)raw_val * 100) % 207) * 1000000) / 207;
+/* /\* see "Temperature Measurement" section from register map description *\/ */
+/* static inline void icm20948_convert_temp(struct sensor_value *val, */
+/* 					 int16_t raw_val) */
+/* { */
+/* 	val->val1 = (((int64_t)raw_val * 100) / 207) + 25; */
+/* 	val->val2 = ((((int64_t)raw_val * 100) % 207) * 1000000) / 207; */
 
-	if (val->val2 < 0) {
-		val->val1--;
-		val->val2 += 1000000;
-	} else if (val->val2 >= 1000000) {
-		val->val1++;
-		val->val2 -= 1000000;
-	}
-}
+/* 	if (val->val2 < 0) { */
+/* 		val->val1--; */
+/* 		val->val2 += 1000000; */
+/* 	} else if (val->val2 >= 1000000) { */
+/* 		val->val1++; */
+/* 		val->val2 -= 1000000; */
+/* 	} */
+/* } */
 
 static int icm20948_channel_get(const struct device *dev,
 				enum sensor_channel chan,
@@ -70,180 +70,139 @@ static int icm20948_channel_get(const struct device *dev,
 {
 	const struct icm20948_data *drv_data = dev->data;
 
-	switch (chan) {
-	case SENSOR_CHAN_ACCEL_XYZ:
-		icm20948_convert_accel(val, drv_data->accel_x,
-				       drv_data->accel_sensitivity_shift);
-		icm20948_convert_accel(val + 1, drv_data->accel_y,
-				       drv_data->accel_sensitivity_shift);
-		icm20948_convert_accel(val + 2, drv_data->accel_z,
-				       drv_data->accel_sensitivity_shift);
-		break;
-	case SENSOR_CHAN_ACCEL_X:
-		icm20948_convert_accel(val, drv_data->accel_x,
-				       drv_data->accel_sensitivity_shift);
-		break;
-	case SENSOR_CHAN_ACCEL_Y:
-		icm20948_convert_accel(val, drv_data->accel_y,
-				       drv_data->accel_sensitivity_shift);
-		break;
-	case SENSOR_CHAN_ACCEL_Z:
-		icm20948_convert_accel(val, drv_data->accel_z,
-				       drv_data->accel_sensitivity_shift);
-		break;
-	case SENSOR_CHAN_GYRO_XYZ:
-		icm20948_convert_gyro(val, drv_data->gyro_x,
-				      drv_data->gyro_sensitivity_x10);
-		icm20948_convert_gyro(val + 1, drv_data->gyro_y,
-				      drv_data->gyro_sensitivity_x10);
-		icm20948_convert_gyro(val + 2, drv_data->gyro_z,
-				      drv_data->gyro_sensitivity_x10);
-		break;
-	case SENSOR_CHAN_GYRO_X:
-		icm20948_convert_gyro(val, drv_data->gyro_x,
-				      drv_data->gyro_sensitivity_x10);
-		break;
-	case SENSOR_CHAN_GYRO_Y:
-		icm20948_convert_gyro(val, drv_data->gyro_y,
-				      drv_data->gyro_sensitivity_x10);
-		break;
-	case SENSOR_CHAN_GYRO_Z:
-		icm20948_convert_gyro(val, drv_data->gyro_z,
-				      drv_data->gyro_sensitivity_x10);
-		break;
-	case SENSOR_CHAN_DIE_TEMP:
-		icm20948_convert_temp(val, drv_data->temp);
-		break;
-	default:
-		return -ENOTSUP;
-	}
+	/* switch (chan) { */
+	/* case SENSOR_CHAN_ACCEL_XYZ: */
+	/* 	icm20948_convert_accel(val, drv_data->accel_x, */
+	/* 			       drv_data->accel_sensitivity_shift); */
+	/* 	icm20948_convert_accel(val + 1, drv_data->accel_y, */
+	/* 			       drv_data->accel_sensitivity_shift); */
+	/* 	icm20948_convert_accel(val + 2, drv_data->accel_z, */
+	/* 			       drv_data->accel_sensitivity_shift); */
+	/* 	break; */
+	/* case SENSOR_CHAN_ACCEL_X: */
+	/* 	icm20948_convert_accel(val, drv_data->accel_x, */
+	/* 			       drv_data->accel_sensitivity_shift); */
+	/* 	break; */
+	/* case SENSOR_CHAN_ACCEL_Y: */
+	/* 	icm20948_convert_accel(val, drv_data->accel_y, */
+	/* 			       drv_data->accel_sensitivity_shift); */
+	/* 	break; */
+	/* case SENSOR_CHAN_ACCEL_Z: */
+	/* 	icm20948_convert_accel(val, drv_data->accel_z, */
+	/* 			       drv_data->accel_sensitivity_shift); */
+	/* 	break; */
+	/* case SENSOR_CHAN_GYRO_XYZ: */
+	/* 	icm20948_convert_gyro(val, drv_data->gyro_x, */
+	/* 			      drv_data->gyro_sensitivity_x10); */
+	/* 	icm20948_convert_gyro(val + 1, drv_data->gyro_y, */
+	/* 			      drv_data->gyro_sensitivity_x10); */
+	/* 	icm20948_convert_gyro(val + 2, drv_data->gyro_z, */
+	/* 			      drv_data->gyro_sensitivity_x10); */
+	/* 	break; */
+	/* case SENSOR_CHAN_GYRO_X: */
+	/* 	icm20948_convert_gyro(val, drv_data->gyro_x, */
+	/* 			      drv_data->gyro_sensitivity_x10); */
+	/* 	break; */
+	/* case SENSOR_CHAN_GYRO_Y: */
+	/* 	icm20948_convert_gyro(val, drv_data->gyro_y, */
+	/* 			      drv_data->gyro_sensitivity_x10); */
+	/* 	break; */
+	/* case SENSOR_CHAN_GYRO_Z: */
+	/* 	icm20948_convert_gyro(val, drv_data->gyro_z, */
+	/* 			      drv_data->gyro_sensitivity_x10); */
+	/* 	break; */
+	/* case SENSOR_CHAN_DIE_TEMP: */
+	/* 	icm20948_convert_temp(val, drv_data->temp); */
+	/* 	break; */
+	/* default: */
+	/* 	return -ENOTSUP; */
+	/* } */
 
 	return 0;
 }
 
-int icm20948_tap_fetch(const struct device *dev)
-{
-	int result = 0;
-	struct icm20948_data *drv_data = dev->data;
-
-	if (drv_data->tap_en &&
-	    (drv_data->tap_handler || drv_data->double_tap_handler)) {
-		result = inv_spi_read(REG_INT_STATUS3, drv_data->fifo_data, 1);
-		if (drv_data->fifo_data[0] & BIT_INT_STATUS_TAP_DET) {
-			result = inv_spi_read(REG_APEX_DATA4,
-					      drv_data->fifo_data, 1);
-			if (drv_data->fifo_data[0] & APEX_TAP) {
-				if (drv_data->tap_trigger.type ==
-				    SENSOR_TRIG_TAP) {
-					if (drv_data->tap_handler) {
-						LOG_DBG("Single Tap detected");
-						drv_data->tap_handler(dev
-						      , &drv_data->tap_trigger);
-					}
-				} else {
-					LOG_ERR("Trigger type is mismatched");
-				}
-			} else if (drv_data->fifo_data[0] & APEX_DOUBLE_TAP) {
-				if (drv_data->double_tap_trigger.type ==
-				    SENSOR_TRIG_DOUBLE_TAP) {
-					if (drv_data->double_tap_handler) {
-						LOG_DBG("Double Tap detected");
-						drv_data->double_tap_handler(dev
-						     , &drv_data->tap_trigger);
-					}
-				} else {
-					LOG_ERR("Trigger type is mismatched");
-				}
-			} else {
-				LOG_DBG("Not supported tap event");
-			}
-		}
-	}
-
-	return 0;
-}
 
 static int icm20948_sample_fetch(const struct device *dev,
 				 enum sensor_channel chan)
 {
-	int result = 0;
-	uint16_t fifo_count = 0;
-	struct icm20948_data *drv_data = dev->data;
+	/* int result = 0; */
+	/* uint16_t fifo_count = 0; */
+	/* struct icm20948_data *drv_data = dev->data; */
 
-	/* Read INT_STATUS (0x45) and FIFO_COUNTH(0x46), FIFO_COUNTL(0x47) */
-	result = inv_spi_read(REG_INT_STATUS, drv_data->fifo_data, 3);
+	/* /\* Read INT_STATUS (0x45) and FIFO_COUNTH(0x46), FIFO_COUNTL(0x47) *\/ */
+	/* result = inv_spi_read(REG_INT_STATUS, drv_data->fifo_data, 3); */
 
-	if (drv_data->fifo_data[0] & BIT_INT_STATUS_DRDY) {
-		fifo_count = (drv_data->fifo_data[1] << 8)
-			+ (drv_data->fifo_data[2]);
-		result = inv_spi_read(REG_FIFO_DATA, drv_data->fifo_data,
-				      fifo_count);
+	/* if (drv_data->fifo_data[0] & BIT_INT_STATUS_DRDY) { */
+	/* 	fifo_count = (drv_data->fifo_data[1] << 8) */
+	/* 		+ (drv_data->fifo_data[2]); */
+	/* 	result = inv_spi_read(REG_FIFO_DATA, drv_data->fifo_data, */
+	/* 			      fifo_count); */
 
-		/* FIFO Data structure
-		 * Packet 1 : FIFO Header(1), AccelX(2), AccelY(2),
-		 *            AccelZ(2), Temperature(1)
-		 * Packet 2 : FIFO Header(1), GyroX(2), GyroY(2),
-		 *            GyroZ(2), Temperature(1)
-		 * Packet 3 : FIFO Header(1), AccelX(2), AccelY(2), AccelZ(2),
-		 *            GyroX(2), GyroY(2), GyroZ(2), Temperature(1)
-		 */
-		if (drv_data->fifo_data[0] & BIT_FIFO_HEAD_ACCEL) {
-			/* Check empty values */
-			if (!(drv_data->fifo_data[1] == FIFO_ACCEL0_RESET_VALUE
-			      && drv_data->fifo_data[2] ==
-			      FIFO_ACCEL1_RESET_VALUE)) {
-				drv_data->accel_x =
-					(drv_data->fifo_data[1] << 8)
-					+ (drv_data->fifo_data[2]);
-				drv_data->accel_y =
-					(drv_data->fifo_data[3] << 8)
-					+ (drv_data->fifo_data[4]);
-				drv_data->accel_z =
-					(drv_data->fifo_data[5] << 8)
-					+ (drv_data->fifo_data[6]);
-			}
-			if (!(drv_data->fifo_data[0] & BIT_FIFO_HEAD_GYRO)) {
-				drv_data->temp =
-					(int16_t)(drv_data->fifo_data[7]);
-			} else {
-				if (!(drv_data->fifo_data[7] ==
-				      FIFO_GYRO0_RESET_VALUE &&
-				      drv_data->fifo_data[8] ==
-				      FIFO_GYRO1_RESET_VALUE)) {
-					drv_data->gyro_x =
-						(drv_data->fifo_data[7] << 8)
-						+ (drv_data->fifo_data[8]);
-					drv_data->gyro_y =
-						(drv_data->fifo_data[9] << 8)
-						+ (drv_data->fifo_data[10]);
-					drv_data->gyro_z =
-						(drv_data->fifo_data[11] << 8)
-						+ (drv_data->fifo_data[12]);
-				}
-				drv_data->temp =
-					(int16_t)(drv_data->fifo_data[13]);
-			}
-		} else {
-			if (drv_data->fifo_data[0] & BIT_FIFO_HEAD_GYRO) {
-				if (!(drv_data->fifo_data[1] ==
-				      FIFO_GYRO0_RESET_VALUE &&
-				      drv_data->fifo_data[2] ==
-				      FIFO_GYRO1_RESET_VALUE)) {
-					drv_data->gyro_x =
-						(drv_data->fifo_data[1] << 8)
-						+ (drv_data->fifo_data[2]);
-					drv_data->gyro_y =
-						(drv_data->fifo_data[3] << 8)
-						+ (drv_data->fifo_data[4]);
-					drv_data->gyro_z =
-						(drv_data->fifo_data[5] << 8)
-						+ (drv_data->fifo_data[6]);
-				}
-				drv_data->temp =
-					(int16_t)(drv_data->fifo_data[7]);
-			}
-		}
-	}
+	/* 	/\* FIFO Data structure */
+	/* 	 * Packet 1 : FIFO Header(1), AccelX(2), AccelY(2), */
+	/* 	 *            AccelZ(2), Temperature(1) */
+	/* 	 * Packet 2 : FIFO Header(1), GyroX(2), GyroY(2), */
+	/* 	 *            GyroZ(2), Temperature(1) */
+	/* 	 * Packet 3 : FIFO Header(1), AccelX(2), AccelY(2), AccelZ(2), */
+	/* 	 *            GyroX(2), GyroY(2), GyroZ(2), Temperature(1) */
+	/* 	 *\/ */
+	/* 	if (drv_data->fifo_data[0] & BIT_FIFO_HEAD_ACCEL) { */
+	/* 		/\* Check empty values *\/ */
+	/* 		if (!(drv_data->fifo_data[1] == FIFO_ACCEL0_RESET_VALUE */
+	/* 		      && drv_data->fifo_data[2] == */
+	/* 		      FIFO_ACCEL1_RESET_VALUE)) { */
+	/* 			drv_data->accel_x = */
+	/* 				(drv_data->fifo_data[1] << 8) */
+	/* 				+ (drv_data->fifo_data[2]); */
+	/* 			drv_data->accel_y = */
+	/* 				(drv_data->fifo_data[3] << 8) */
+	/* 				+ (drv_data->fifo_data[4]); */
+	/* 			drv_data->accel_z = */
+	/* 				(drv_data->fifo_data[5] << 8) */
+	/* 				+ (drv_data->fifo_data[6]); */
+	/* 		} */
+	/* 		if (!(drv_data->fifo_data[0] & BIT_FIFO_HEAD_GYRO)) { */
+	/* 			drv_data->temp = */
+	/* 				(int16_t)(drv_data->fifo_data[7]); */
+	/* 		} else { */
+	/* 			if (!(drv_data->fifo_data[7] == */
+	/* 			      FIFO_GYRO0_RESET_VALUE && */
+	/* 			      drv_data->fifo_data[8] == */
+	/* 			      FIFO_GYRO1_RESET_VALUE)) { */
+	/* 				drv_data->gyro_x = */
+	/* 					(drv_data->fifo_data[7] << 8) */
+	/* 					+ (drv_data->fifo_data[8]); */
+	/* 				drv_data->gyro_y = */
+	/* 					(drv_data->fifo_data[9] << 8) */
+	/* 					+ (drv_data->fifo_data[10]); */
+	/* 				drv_data->gyro_z = */
+	/* 					(drv_data->fifo_data[11] << 8) */
+	/* 					+ (drv_data->fifo_data[12]); */
+	/* 			} */
+	/* 			drv_data->temp = */
+	/* 				(int16_t)(drv_data->fifo_data[13]); */
+	/* 		} */
+	/* 	} else { */
+	/* 		if (drv_data->fifo_data[0] & BIT_FIFO_HEAD_GYRO) { */
+	/* 			if (!(drv_data->fifo_data[1] == */
+	/* 			      FIFO_GYRO0_RESET_VALUE && */
+	/* 			      drv_data->fifo_data[2] == */
+	/* 			      FIFO_GYRO1_RESET_VALUE)) { */
+	/* 				drv_data->gyro_x = */
+	/* 					(drv_data->fifo_data[1] << 8) */
+	/* 					+ (drv_data->fifo_data[2]); */
+	/* 				drv_data->gyro_y = */
+	/* 					(drv_data->fifo_data[3] << 8) */
+	/* 					+ (drv_data->fifo_data[4]); */
+	/* 				drv_data->gyro_z = */
+	/* 					(drv_data->fifo_data[5] << 8) */
+	/* 					+ (drv_data->fifo_data[6]); */
+	/* 			} */
+	/* 			drv_data->temp = */
+	/* 				(int16_t)(drv_data->fifo_data[7]); */
+	/* 		} */
+	/* 	} */
+	/* } */
 
 	return 0;
 }
@@ -257,60 +216,60 @@ static int icm20948_attr_set(const struct device *dev,
 
 	__ASSERT_NO_MSG(val != NULL);
 
-	switch (chan) {
-	case SENSOR_CHAN_ACCEL_X:
-	case SENSOR_CHAN_ACCEL_Y:
-	case SENSOR_CHAN_ACCEL_Z:
-	case SENSOR_CHAN_ACCEL_XYZ:
-		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			if (val->val1 > 8000 || val->val1 < 1) {
-				LOG_ERR("Incorrect sampling value");
-				return -EINVAL;
-			} else {
-				drv_data->accel_hz = val->val1;
-			}
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			if (val->val1 < ACCEL_FS_16G ||
-			    val->val1 > ACCEL_FS_2G) {
-				LOG_ERR("Incorrect fullscale value");
-				return -EINVAL;
-			} else {
-				drv_data->accel_sf = val->val1;
-			}
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -ENOTSUP;
-		}
+	/* switch (chan) { */
+	/* case SENSOR_CHAN_ACCEL_X: */
+	/* case SENSOR_CHAN_ACCEL_Y: */
+	/* case SENSOR_CHAN_ACCEL_Z: */
+	/* case SENSOR_CHAN_ACCEL_XYZ: */
+	/* 	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) { */
+	/* 		if (val->val1 > 8000 || val->val1 < 1) { */
+	/* 			LOG_ERR("Incorrect sampling value"); */
+	/* 			return -EINVAL; */
+	/* 		} else { */
+	/* 			drv_data->accel_hz = val->val1; */
+	/* 		} */
+	/* 	} else if (attr == SENSOR_ATTR_FULL_SCALE) { */
+	/* 		if (val->val1 < ACCEL_FS_16G || */
+	/* 		    val->val1 > ACCEL_FS_2G) { */
+	/* 			LOG_ERR("Incorrect fullscale value"); */
+	/* 			return -EINVAL; */
+	/* 		} else { */
+	/* 			drv_data->accel_sf = val->val1; */
+	/* 		} */
+	/* 	} else { */
+	/* 		LOG_ERR("Not supported ATTR"); */
+	/* 		return -ENOTSUP; */
+	/* 	} */
 
-		break;
-	case SENSOR_CHAN_GYRO_X:
-	case SENSOR_CHAN_GYRO_Y:
-	case SENSOR_CHAN_GYRO_Z:
-	case SENSOR_CHAN_GYRO_XYZ:
-		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			if (val->val1 > 8000 || val->val1 < 12) {
-				LOG_ERR("Incorrect sampling value");
-				return -EINVAL;
-			} else {
-				drv_data->gyro_hz = val->val1;
-			}
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			if (val->val1 < GYRO_FS_2000DPS ||
-			    val->val1 > GYRO_FS_15DPS) {
-				LOG_ERR("Incorrect fullscale value");
-				return -EINVAL;
-			} else {
-				drv_data->gyro_sf = val->val1;
-			}
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -EINVAL;
-		}
-		break;
-	default:
-		LOG_ERR("Not support");
-		return -EINVAL;
-	}
+	/* 	break; */
+	/* case SENSOR_CHAN_GYRO_X: */
+	/* case SENSOR_CHAN_GYRO_Y: */
+	/* case SENSOR_CHAN_GYRO_Z: */
+	/* case SENSOR_CHAN_GYRO_XYZ: */
+	/* 	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) { */
+	/* 		if (val->val1 > 8000 || val->val1 < 12) { */
+	/* 			LOG_ERR("Incorrect sampling value"); */
+	/* 			return -EINVAL; */
+	/* 		} else { */
+	/* 			drv_data->gyro_hz = val->val1; */
+	/* 		} */
+	/* 	} else if (attr == SENSOR_ATTR_FULL_SCALE) { */
+	/* 		if (val->val1 < GYRO_FS_2000DPS || */
+	/* 		    val->val1 > GYRO_FS_15DPS) { */
+	/* 			LOG_ERR("Incorrect fullscale value"); */
+	/* 			return -EINVAL; */
+	/* 		} else { */
+	/* 			drv_data->gyro_sf = val->val1; */
+	/* 		} */
+	/* 	} else { */
+	/* 		LOG_ERR("Not supported ATTR"); */
+	/* 		return -EINVAL; */
+	/* 	} */
+	/* 	break; */
+	/* default: */
+	/* 	LOG_ERR("Not support"); */
+	/* 	return -EINVAL; */
+	/* } */
 
 	return 0;
 }
@@ -324,40 +283,40 @@ static int icm20948_attr_get(const struct device *dev,
 
 	__ASSERT_NO_MSG(val != NULL);
 
-	switch (chan) {
-	case SENSOR_CHAN_ACCEL_X:
-	case SENSOR_CHAN_ACCEL_Y:
-	case SENSOR_CHAN_ACCEL_Z:
-	case SENSOR_CHAN_ACCEL_XYZ:
-		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			val->val1 = drv_data->accel_hz;
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			val->val1 = drv_data->accel_sf;
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -EINVAL;
-		}
+	/* switch (chan) { */
+	/* case SENSOR_CHAN_ACCEL_X: */
+	/* case SENSOR_CHAN_ACCEL_Y: */
+	/* case SENSOR_CHAN_ACCEL_Z: */
+	/* case SENSOR_CHAN_ACCEL_XYZ: */
+	/* 	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) { */
+	/* 		val->val1 = drv_data->accel_hz; */
+	/* 	} else if (attr == SENSOR_ATTR_FULL_SCALE) { */
+	/* 		val->val1 = drv_data->accel_sf; */
+	/* 	} else { */
+	/* 		LOG_ERR("Not supported ATTR"); */
+	/* 		return -EINVAL; */
+	/* 	} */
 
-		break;
-	case SENSOR_CHAN_GYRO_X:
-	case SENSOR_CHAN_GYRO_Y:
-	case SENSOR_CHAN_GYRO_Z:
-	case SENSOR_CHAN_GYRO_XYZ:
-		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			val->val1 = drv_data->gyro_hz;
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			val->val1 = drv_data->gyro_sf;
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -EINVAL;
-		}
+	/* 	break; */
+	/* case SENSOR_CHAN_GYRO_X: */
+	/* case SENSOR_CHAN_GYRO_Y: */
+	/* case SENSOR_CHAN_GYRO_Z: */
+	/* case SENSOR_CHAN_GYRO_XYZ: */
+	/* 	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) { */
+	/* 		val->val1 = drv_data->gyro_hz; */
+	/* 	} else if (attr == SENSOR_ATTR_FULL_SCALE) { */
+	/* 		val->val1 = drv_data->gyro_sf; */
+	/* 	} else { */
+	/* 		LOG_ERR("Not supported ATTR"); */
+	/* 		return -EINVAL; */
+	/* 	} */
 
-		break;
+	/* 	break; */
 
-	default:
-		LOG_ERR("Not support");
-		return -EINVAL;
-	}
+	/* default: */
+	/* 	LOG_ERR("Not support"); */
+	/* 	return -EINVAL; */
+	/* } */
 
 	return 0;
 }
@@ -368,17 +327,17 @@ static int icm20948_data_init(struct icm20948_data *data,
 	data->accel_x = 0;
 	data->accel_y = 0;
 	data->accel_z = 0;
-	data->temp = 0;
+	/* data->temp = 0; */
 	data->gyro_x = 0;
 	data->gyro_y = 0;
 	data->gyro_z = 0;
-	data->accel_hz = cfg->accel_hz;
-	data->gyro_hz = cfg->gyro_hz;
+	/* data->accel_hz = cfg->accel_hz; */
+	/* data->gyro_hz = cfg->gyro_hz; */
 
-	data->accel_sf = cfg->accel_fs;
-	data->gyro_sf = cfg->gyro_fs;
+	/* data->accel_sf = cfg->accel_fs; */
+	/* data->gyro_sf = cfg->gyro_fs; */
 
-	data->tap_en = false;
+	/* data->tap_en = false; */
 	data->sensor_started = false;
 
 	return 0;
@@ -389,6 +348,8 @@ static int icm20948_init(const struct device *dev)
 {
 	struct icm20948_data *drv_data = dev->data;
 	const struct icm20948_config *cfg = dev->config;
+
+        LOG_ERR("icm20948_init");
 
 	drv_data->spi = device_get_binding(cfg->spi_label);
 	if (!drv_data->spi) {
@@ -418,25 +379,25 @@ static int icm20948_init(const struct device *dev)
 	icm20948_data_init(drv_data, cfg);
 	icm20948_sensor_init(dev);
 
-	drv_data->accel_sensitivity_shift = 14 - 3;
-	drv_data->gyro_sensitivity_x10 = icm20948_gyro_sensitivity_x10[3];
+/* 	drv_data->accel_sensitivity_shift = 14 - 3; */
+/* 	drv_data->gyro_sensitivity_x10 = icm20948_gyro_sensitivity_x10[3]; */
 
-#ifdef CONFIG_ICM20948_TRIGGER
-	if (icm20948_init_interrupt(dev) < 0) {
-		LOG_ERR("Failed to initialize interrupts.");
-		return -EIO;
-	}
-#endif
+/* #ifdef CONFIG_ICM20948_TRIGGER */
+/* 	if (icm20948_init_interrupt(dev) < 0) { */
+/* 		LOG_ERR("Failed to initialize interrupts."); */
+/* 		return -EIO; */
+/* 	} */
+/* #endif */
 
-	LOG_DBG("Initialize interrupt done");
+	LOG_ERR("Initialize interrupt done"); // used to be LOG_DBG
 
 	return 0;
 }
 
 static const struct sensor_driver_api icm20948_driver_api = {
-#ifdef CONFIG_ICM20948_TRIGGER
-	.trigger_set = icm20948_trigger_set,
-#endif
+/* #ifdef CONFIG_ICM20948_TRIGGER */
+/* 	.trigger_set = icm20948_trigger_set, */
+/* #endif */
 	.sample_fetch = icm20948_sample_fetch,
 	.channel_get = icm20948_channel_get,
 	.attr_set = icm20948_attr_set,
@@ -455,10 +416,10 @@ static const struct sensor_driver_api icm20948_driver_api = {
 		.gpio_label = DT_INST_SPI_DEV_CS_GPIOS_LABEL(index),	\
 		.gpio_pin = DT_INST_SPI_DEV_CS_GPIOS_PIN(index),	\
 		.gpio_dt_flags = DT_INST_SPI_DEV_CS_GPIOS_FLAGS(index),	\
-		.accel_hz = DT_INST_PROP(index, accel_hz),		\
-		.gyro_hz = DT_INST_PROP(index, gyro_hz),		\
-		.accel_fs = DT_ENUM_IDX(DT_DRV_INST(index), accel_fs),	\
-		.gyro_fs = DT_ENUM_IDX(DT_DRV_INST(index), gyro_fs),	\
+                /*		.accel_hz = DT_INST_PROP(index, accel_hz),*/ \
+		/* .gyro_hz = DT_INST_PROP(index, gyro_hz),	*/	\
+		/* .accel_fs = DT_ENUM_IDX(DT_DRV_INST(index), accel_fs), */ \
+		/* .gyro_fs = DT_ENUM_IDX(DT_DRV_INST(index), gyro_fs), */ \
 	}
 
 #define ICM20948_INIT(index)						\

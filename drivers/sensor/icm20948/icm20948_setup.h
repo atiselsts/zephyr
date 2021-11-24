@@ -10,10 +10,10 @@
 #include <device.h>
 
 int icm20948_sensor_init(const struct device *dev);
-int icm20948_turn_on_fifo(const struct device *dev);
-int icm20948_turn_off_fifo(const struct device *dev);
+// int icm20948_turn_on_fifo(const struct device *dev);
+// int icm20948_turn_off_fifo(const struct device *dev);
 int icm20948_turn_off_sensor(const struct device *dev);
 int icm20948_turn_on_sensor(const struct device *dev);
-int icm20948_set_odr(const struct device *dev, int a_rate, int g_rate);
+// int icm20948_set_odr(const struct device *dev, int a_rate, int g_rate);
 
 #endif /* __SENSOR_ICM20948_ICM20948_SETUP__ */

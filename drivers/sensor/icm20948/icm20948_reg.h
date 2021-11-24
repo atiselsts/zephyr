@@ -1,545 +1,810 @@
 /*
- * Copyright (c) 2020 TDK Invensense
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
-#ifndef ZEPHYR_DRIVERS_SENSOR_ICM20948_ICM20948_REG_H_
-#define ZEPHYR_DRIVERS_SENSOR_ICM20948_ICM20948_REG_H_
+This file contains a useful c translation of the datasheet register map
 
-/* BANK 0 */
-#define REG_DEVICE_CONFIG	0x11
-#define REG_DRIVE_CONFIG	0x13
-#define REG_INT_CONFIG		0x14
-#define REG_FIFO_CONFIG		0x16
-#define REG_TEMP_DATA1		0x1D
-#define REG_TEMP_DATA0		0x1E
-#define REG_ACCEL_DATA_X1	0x1F
-#define REG_ACCEL_DATA_X0	0x20
-#define REG_ACCEL_DATA_Y1	0x21
-#define REG_ACCEL_DATA_Y0	0x22
-#define REG_ACCEL_DATA_Z1	0x23
-#define REG_ACCEL_DATA_Z0	0x24
-#define REG_GYRO_DATA_X1	0x25
-#define REG_GYRO_DATA_X0	0x26
-#define REG_GYRO_DATA_Y1	0x27
-#define REG_GYRO_DATA_Y0	0x28
-#define REG_GYRO_DATA_Z1	0x29
-#define REG_GYRO_DATA_Z0	0x2A
-#define REG_TMST_FSYNCH		0x2B
-#define REG_TMST_FSYNCL		0x2C
-#define REG_INT_STATUS		0x2D
-#define REG_FIFO_COUNTH		0x2E
-#define REG_FIFO_COUNTL		0x2F
-#define REG_FIFO_DATA		0x30
-#define REG_APEX_DATA0		0x31
-#define REG_APEX_DATA1		0x32
-#define REG_APEX_DATA2		0x33
-#define REG_APEX_DATA3		0x34
-#define REG_APEX_DATA4		0x35
-#define REG_APEX_DATA5		0x36
-#define REG_INT_STATUS2		0x37
-#define REG_INT_STATUS3		0x38
-#define REG_SIGNAL_PATH_RESET	0x4B
-#define REG_INTF_CONFIG0	0x4C
-#define REG_INTF_CONFIG1	0x4D
-#define REG_PWR_MGMT0		0x4E
-#define REG_GYRO_CONFIG0	0x4F
-#define REG_ACCEL_CONFIG0	0x50
-#define REG_GYRO_CONFIG1	0x51
-#define REG_GYRO_ACCEL_CONFIG0	0x52
-#define REG_ACCEL_CONFIG1	0x53
-#define REG_TMST_CONFIG		0x54
-#define REG_APEX_CONFIG0	0x56
-#define REG_SMD_CONFIG		0x57
-#define REG_FIFO_CONFIG1	0x5F
-#define REG_FIFO_CONFIG2	0x60
-#define REG_FIFO_CONFIG4	0x61
-#define REG_FIFO_FSYNC_CONFIG	0x62
-#define REG_INT_CONFIG0		0x63
-#define REG_INT_CONFIG1		0x64
-#define REG_INT_SOURCE0		0x65
-#define REG_INT_SOURCE1		0x66
-#define REG_INT_SOURCE3		0x68
-#define REG_INT_SOURCE4		0x69
-#define REG_FIFO_LOST_PKT0	0x6C
-#define REG_FIFO_LOST_PKT1	0x6D
-#define REG_SELF_TEST_CONFIG	0x70
-#define REG_WHO_AM_I		0x75
-#define REG_BANK_SEL		0x76
+*/
 
-/* BANK 1 */
-#define REG_SENSOR_CONFIG0		0x03
-#define REG_GYRO_CONFIG_STATIC2		0x0B
-#define REG_GYRO_CONFIG_STATIC3		0x0C
-#define REG_GYRO_CONFIG_STATIC4		0x0D
-#define REG_GYRO_CONFIG_STATIC5		0x0E
-#define REG_GYRO_CONFIG_STATIC6		0x0F
-#define REG_GYRO_CONFIG_STATIC7		0x10
-#define REG_GYRO_CONFIG_STATIC8		0x11
-#define REG_GYRO_CONFIG_STATIC9		0x12
-#define REG_GYRO_CONFIG_STATIC10	0x13
-#define REG_XG_ST_DATA			0x5F
-#define REG_YG_ST_DATA			0x60
-#define REG_ZG_ST_DATA			0x61
-#define REG_TMSTVAL0			0x62
-#define REG_TMSTVAL1			0x63
-#define REG_TMSTVAL2			0x64
-#define REG_INTF_CONFIG4		0x7A
-#define REG_INTF_CONFIG5		0x7B
-#define REG_INTF_CONFIG6		0x7C
+#ifndef _ICM_20948_REGISTERS_H_
+#define _ICM_20948_REGISTERS_H_
 
-/* BANK 2 */
-#define REG_ACCEL_CONFIG_STATIC2	0x03
-#define REG_ACCEL_CONFIG_STATIC3	0x04
-#define REG_ACCEL_CONFIG_STATIC4	0x05
-#define REG_XA_ST_DATA			0x3B
-#define REG_YA_ST_DATA			0x3C
-#define REG_ZA_ST_DATA			0x3D
+#include <stdint.h>
 
-/* BANK 4 */
-#define REG_GYRO_ON_OFF_CONFIG		0x0E
-#define REG_APEX_CONFIG1		0x40
-#define REG_APEX_CONFIG2		0x41
-#define REG_APEX_CONFIG3		0x42
-#define REG_APEX_CONFIG4		0x43
-#define REG_APEX_CONFIG5		0x44
-#define REG_APEX_CONFIG6		0x45
-#define REG_APEX_CONFIG7		0x46
-#define REG_APEX_CONFIG8		0x47
-#define REG_APEX_CONFIG9		0x48
-#define REG_ACCEL_WOM_X_THR		0x4A
-#define REG_ACCEL_WOM_Y_THR		0x4B
-#define REG_ACCEL_WOM_Z_THR		0x4C
-#define REG_INT_SOURCE6			0x4D
-#define REG_INT_SOURCE7			0x4E
-#define REG_INT_SOURCE8			0x4F
-#define REG_INT_SOURCE9			0x50
-#define REG_INT_SOURCE10		0x51
-#define REG_OFFSET_USER0		0x77
-#define REG_OFFSET_USER1		0x78
-#define REG_OFFSET_USER2		0x79
-#define REG_OFFSET_USER3		0x7A
-#define REG_OFFSET_USER4		0x7B
-#define REG_OFFSET_USER5		0x7C
-#define REG_OFFSET_USER6		0x7D
-#define REG_OFFSET_USER7		0x7E
-#define REG_OFFSET_USER8		0x7F
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
 
-/* #define REG_#define REG_BANK_SEL */
-#define BIT_BANK_SEL_0			0x00
-#define BIT_BANK_SEL_1			0x01
-#define BIT_BANK_SEL_2			0x02
-#define BIT_BANK_SEL_3			0x03
-#define BIT_BANK_SEL_4			0x04
+  typedef enum
+  {
+    // Generalized
+    REG_BANK_SEL = 0x7F,
 
-#define WHO_AM_I_ICM20948		0x42
+    // Gyroscope and Accelerometer
+    // User Bank 0
+    REG_WHO_AM_I = 0x00,
+    REG_LPF,
+    // Break
+    REG_USER_CTRL = 0x03,
+    // Break
+    REG_LP_CONFIG = 0x05,
+    REG_PWR_MGMT_1,
+    REG_PWR_MGMT_2,
+    // Break
+    REG_INT_PIN_CONFIG = 0x0F,
+    REG_INT_ENABLE,
+    REG_INT_ENABLE_1,
+    REG_INT_ENABLE_2,
+    REG_INT_ENABLE_3,
+    // Break
+    REG_I2C_MST_STATUS = 0x17,
+    REG_DMP_INT_STATUS,
+    REG_INT_STATUS,
+    REG_INT_STATUS_1,
+    REG_INT_STATUS_2,
+    REG_INT_STATUS_3,
+    // Break
+    REG_SINGLE_FIFO_PRIORITY_SEL = 0x26,
+    // Break
+    REG_DELAY_TIMEH = 0x28,
+    REG_DELAY_TIMEL,
+    // Break
+    REG_ACCEL_XOUT_H = 0x2D,
+    REG_ACCEL_XOUT_L,
+    REG_ACCEL_YOUT_H,
+    REG_ACCEL_YOUT_L,
+    REG_ACCEL_ZOUT_H,
+    REG_ACCEL_ZOUT_L,
+    REG_GYRO_XOUT_H,
+    REG_GYRO_XOUT_L,
+    REG_GYRO_YOUT_H,
+    REG_GYRO_YOUT_L,
+    REG_GYRO_ZOUT_H,
+    REG_GYRO_ZOUT_L,
+    REG_TEMP_OUT_H,
+    REG_TEMP_OUT_L,
+    REG_EXT_PERIPH_SENS_DATA_00,
+    REG_EXT_PERIPH_SENS_DATA_01,
+    REG_EXT_PERIPH_SENS_DATA_02,
+    REG_EXT_PERIPH_SENS_DATA_03,
+    REG_EXT_PERIPH_SENS_DATA_04,
+    REG_EXT_PERIPH_SENS_DATA_05,
+    REG_EXT_PERIPH_SENS_DATA_06,
+    REG_EXT_PERIPH_SENS_DATA_07,
+    REG_EXT_PERIPH_SENS_DATA_08,
+    REG_EXT_PERIPH_SENS_DATA_09,
+    REG_EXT_PERIPH_SENS_DATA_10,
+    REG_EXT_PERIPH_SENS_DATA_11,
+    REG_EXT_PERIPH_SENS_DATA_12,
+    REG_EXT_PERIPH_SENS_DATA_13,
+    REG_EXT_PERIPH_SENS_DATA_14,
+    REG_EXT_PERIPH_SENS_DATA_15,
+    REG_EXT_PERIPH_SENS_DATA_16,
+    REG_EXT_PERIPH_SENS_DATA_17,
+    REG_EXT_PERIPH_SENS_DATA_18,
+    REG_EXT_PERIPH_SENS_DATA_19,
+    REG_EXT_PERIPH_SENS_DATA_20,
+    REG_EXT_PERIPH_SENS_DATA_21,
+    REG_EXT_PERIPH_SENS_DATA_22,
+    REG_EXT_PERIPH_SENS_DATA_23,
+    // Break
+    REG_TEMP_BANK0_CONFIG = 0x53,
+    // Break
+    REG_FIFO_EN_1 = 0x66,
+    REG_FIFO_EN_2,
+    REG_FIFO_RST,
+    REG_FIFO_MODE,
+    // Break
+    REG_FIFO_COUNT_H = 0x70,
+    REG_FIFO_COUNT_L,
+    REG_FIFO_R_W,
+    // Break
+    REG_DATA_RDY_STATUS = 0x74,
+    REG_HW_FIX_DISABLE,
+    REG_FIFO_CFG,
+    // Break
+    REG_MEM_START_ADDR = 0x7C, // Hmm, Invensense thought they were sneaky not listing these locations on the datasheet...
+    REG_MEM_R_W = 0x7D,        // These three locations seem to be able to access some memory within the device
+    REG_MEM_BANK0_SEL = 0x7E,   // And that location is also where the DMP image gets loaded
+    REG_REG_BANK0_SEL = 0x7F,
 
-/* Bank0 #define REG_DEVICE_CONFIG_REG */
-#define BIT_SOFT_RESET			0x01
+    // Bank 1
+    REG_SELF_TEST_X_GYRO = 0x02,
+    REG_SELF_TEST_Y_GYRO,
+    REG_SELF_TEST_Z_GYRO,
+    // Break
+    REG_SELF_TEST_X_ACCEL = 0x0E,
+    REG_SELF_TEST_Y_ACCEL,
+    REG_SELF_TEST_Z_ACCEL,
+    // Break
+    REG_XA_OFFS_H = 0x14,
+    REG_XA_OFFS_L,
+    // Break
+    REG_YA_OFFS_H = 0x17,
+    REG_YA_OFFS_L,
+    // Break
+    REG_ZA_OFFS_H = 0x1A,
+    REG_ZA_OFFS_L,
+    // Break
+    REG_TIMEBASE_CORRECTION_PLL = 0x28,
+    // Break
+    REG_REG_BANK1_SEL = 0x7F,
 
-/* Bank0 #define REG_GYRO_CONFIG0, REG_ACCEL_CONFIG0 */
-#define SHIFT_GYRO_FS_SEL		5
-#define SHIFT_ACCEL_FS_SEL		5
-#define SHIFT_ODR_CONF			0
+    // Bank 2
+    REG_GYRO_SMPLRT_DIV = 0x00,
+    REG_GYRO_CONFIG_1,
+    REG_GYRO_CONFIG_2,
+    REG_XG_OFFS_USRH,
+    REG_XG_OFFS_USRL,
+    REG_YG_OFFS_USRH,
+    REG_YG_OFFS_USRL,
+    REG_ZG_OFFS_USRH,
+    REG_ZG_OFFS_USRL,
+    REG_ODR_ALIGN_EN,
+    // Break
+    REG_ACCEL_SMPLRT_DIV_1 = 0x10,
+    REG_ACCEL_SMPLRT_DIV_2,
+    REG_ACCEL_INTEL_CTRL,
+    REG_ACCEL_WOM_THR,
+    REG_ACCEL_CONFIG,
+    REG_ACCEL_CONFIG_2,
+    // Break
+    REG_PRS_ODR_CONFIG = 0x20,
+    // Break
+    REG_PRGM_START_ADDRH = 0x50,
+    REG_PRGM_START_ADDRL,
+    REG_FSYNC_CONFIG,
+    REG_TEMP_BANK2_CONFIG,
+    REG_MOD_CTRL_USR,
+    // Break
+    REG_REG_BANK2_SEL = 0x7F,
 
-/* Bank0 #define REG_GYRO_CONFIG1 */
-#define BIT_TEMP_FILT_BW_BYPASS		0x00
-#define BIT_TEMP_FILT_BW_170		0x20
-#define BIT_TEMP_FILT_BW_82		0x40
-#define BIT_TEMP_FILT_BW_40		0x60
-#define BIT_TEMP_FILT_BW_20		0x80
-#define BIT_TEMP_FILT_BW_10		0x90
-#define BIT_TEMP_FILT_BW_5		0xC0
-#define BIT_GYR_AVG_FLT_RATE_8KHZ	0x10
-#define BIT_GYR_AVG_FLT_RATE_1KHZ	0x00
-#define BIT_GYR_UI_FILT_ORD_IND_1	0x00
-#define BIT_GYR_UI_FILT_ORD_IND_2	0x04
-#define BIT_GYR_UI_FILT_ORD_IND_3	0x08
-#define BIT_GYR_DEC2_M2_ORD_1		0x00
-#define BIT_GYR_DEC2_M2_ORD_2		0x01
-#define BIT_GYR_DEC2_M2_ORD_3		0x02
+    // Bank 3
+    REG_I2C_MST_ODR_CONFIG = 0x00,
+    REG_I2C_MST_CTRL,
+    REG_I2C_MST_DELAY_CTRL,
+    REG_I2C_PERIPH0_ADDR,
+    REG_I2C_PERIPH0_REG,
+    REG_I2C_PERIPH0_CTRL,
+    REG_I2C_PERIPH0_DO,
+    REG_I2C_PERIPH1_ADDR,
+    REG_I2C_PERIPH1_REG,
+    REG_I2C_PERIPH1_CTRL,
+    REG_I2C_PERIPH1_DO,
+    REG_I2C_PERIPH2_ADDR,
+    REG_I2C_PERIPH2_REG,
+    REG_I2C_PERIPH2_CTRL,
+    REG_I2C_PERIPH2_DO,
+    REG_I2C_PERIPH3_ADDR,
+    REG_I2C_PERIPH3_REG,
+    REG_I2C_PERIPH3_CTRL,
+    REG_I2C_PERIPH3_DO,
+    REG_I2C_PERIPH4_ADDR,
+    REG_I2C_PERIPH4_REG,
+    REG_I2C_PERIPH4_CTRL,
+    REG_I2C_PERIPH4_DO,
+    REG_I2C_PERIPH4_DI,
+    // Break
+    REG_REG_BANK3_SEL = 0x7F,
 
-/* Bank0 REG_ACCEL_CONFIG1 */
-#define BIT_ACC_UI_FILT_ODR_IND_1	0x00
-#define BIT_ACC_UI_FILT_ODR_IND_2	0x08
-#define BIT_ACC_UI_FILT_ODR_IND_3	0x10
-#define BIT_ACC_DEC2_M2_ORD_1		0x00
-#define BIT_ACC_DEC2_M2_ORD_2		0x02
-#define BIT_ACC_DEC2_M2_ORD_3		0x04
-#define BIT_ACC_AVG_FLT_RATE_8KHZ	0x01
-#define BIT_ACC_AVG_FLT_RATE_1KHZ	0x00
+    // Magnetometer
+    M_REG_WIA2 = 0x01,
+    // Break
+    M_REG_ST1 = 0x10,
+    M_REG_HXL,
+    M_REG_HXH,
+    M_REG_HYL,
+    M_REG_HYH,
+    M_REG_HZL,
+    M_REG_HZH,
+    M_REG_ST2,
+    // Break
+    M_REG_CNTL2 = 0x31,
+    M_REG_CNTL3,
+    M_REG_TS1,
+    M_REG_TS2,
+  } ICM_20948_Reg_Addr_e; // These enums are not needed for the user, so they stay in this scope (simplifies naming among other things)
 
-/* Bank0 REG_INT_CONFIG_REG */
-#define SHIFT_INT1_POLARITY		0
-#define SHIFT_INT1_DRIVE_CIRCUIT	1
-#define SHIFT_INT1_MODE			2
+  // Type definitions for the registers
+  typedef struct
+  {
+    uint8_t WHO_AM_I;
+  } ICM_20948_WHO_AM_I_t;
 
-/* Bank0 REG_PWR_MGMT_0 */
-#define BIT_TEMP_DIS			0x20
-#define BIT_IDLE			0x10
-#define BIT_GYRO_MODE_OFF		0x00
-#define BIT_GYRO_MODE_STBY		0x04
-#define BIT_GYRO_MODE_LPM		0x08
-#define BIT_GYRO_MODE_LNM		0x0C
-#define BIT_ACCEL_MODE_OFF		0x00
-#define BIT_ACCEL_MODE_LPM		0x02
-#define BIT_ACCEL_MODE_LNM		0x03
+  typedef struct
+  {
+    uint8_t reserved_0 : 1;
+    uint8_t I2C_MST_RST : 1;
+    uint8_t SRAM_RST : 1;
+    uint8_t DMP_RST : 1;
+    uint8_t I2C_IF_DIS : 1;
+    uint8_t I2C_MST_EN : 1;
+    uint8_t FIFO_EN : 1;
+    uint8_t DMP_EN : 1;
+  } ICM_20948_USER_CTRL_t;
 
-/* Bank0 REG_SIGNAL_PATH_RESET */
-#define BIT_TEMP_RST			0x01
-#define BIT_FIFO_FLUSH			0x02
-#define BIT_TMST_STROBE			0x04
-#define BIT_ABORT_AND_RESET		0x08
-#define BIT_S4S_RESTART			0x10
-#define BIT_DMP_MEM_RESET_EN		0x20
-#define BIT_DMP_INIT_EN			0x40
+  typedef struct
+  {
+    uint8_t reserved_0 : 4;
+    uint8_t GYRO_CYCLE : 1;
+    uint8_t ACCEL_CYCLE : 1;
+    uint8_t I2C_MST_CYCLE : 1;
+    uint8_t reserved_1 : 1;
+  } ICM_20948_LP_CONFIG_t;
 
-/* Bank0 REG_INTF_CONFIG0 */
-#define BIT_FIFO_COUNT_REC		0x40
-#define BIT_COUNT_BIG_ENDIAN		0x20
-#define BIT_SENS_DATA_BIG_ENDIAN	0x10
-#define BIT_UI_SIFS_DISABLE_SPI		0x02
-#define BIT_UI_SIFS_DISABLE_I2C		0x03
+  typedef struct
+  {
+    uint8_t CLKSEL : 3;
+    uint8_t TEMP_DIS : 1;
+    uint8_t reserved_0 : 1;
+    uint8_t LP_EN : 1;
+    uint8_t SLEEP : 1;
+    uint8_t DEVICE_RESET : 1;
+  } ICM_20948_PWR_MGMT_1_t;
 
-/* Bank0 REG_INTF_CONFIG1 */
-#define BIT_GYRO_AFSR_MODE_LFS		0x00
-#define BIT_GYRO_AFSR_MODE_HFS		0x40
-#define BIT_GYRO_AFSR_MODE_DYN		0xC0
-#define BIT_ACCEL_AFSR_MODE_LFS		0x00
-#define BIT_ACCEL_AFSR_MODE_HFS		0x10
-#define BIT_ACCEL_AFSR_MODE_DYN		0x30
-#define BIT_ACCEL_LP_CLK_SEL		0x08
-#define BIT_RTC_MODE			0x04
-#define BIT_CLK_SEL_RC			0x00
-#define BIT_CLK_SEL_PLL			0x01
-#define BIT_CLK_SEL_DIS			0x03
+  typedef struct
+  {
+    uint8_t DISABLE_GYRO : 3;
+    uint8_t DIABLE_ACCEL : 3;
+    uint8_t reserved_0 : 2;
+  } ICM_20948_PWR_MGMT_2_t;
 
-/* Bank0 REG_FIFO_CONFIG1 */
-#define BIT_FIFO_ACCEL_EN		0x01
-#define BIT_FIFO_GYRO_EN		0x02
-#define BIT_FIFO_TEMP_EN		0x04
-#define BIT_FIFO_TMST_FSYNC_EN		0x08
-#define BIT_FIFO_HIRES_EN		0x10
-#define BIT_FIFO_WM_TH			0x20
-#define BIT_FIFO_RESUME_PART_RD		0x40
+  typedef struct
+  {
+    uint8_t reserved_0 : 1;
+    uint8_t BYPASS_EN : 1;
+    uint8_t FSYNC_INT_MODE_EN : 1;
+    uint8_t ACTL_FSYNC : 1;
+    uint8_t INT_ANYRD_2CLEAR : 1;
+    uint8_t INT1_LATCH_EN : 1;
+    uint8_t INT1_OPEN : 1;
+    uint8_t INT1_ACTL : 1;
+  } ICM_20948_INT_PIN_CFG_t;
 
-/* Bank0 REG_INT_CONFIG1 */
-#define BIT_INT_ASY_RST_DISABLE		0x10
+  typedef struct
+  {
+    uint8_t I2C_MST_INT_EN : 1;
+    uint8_t DMP_INT1_EN : 1;
+    uint8_t PLL_READY_EN : 1;
+    uint8_t WOM_INT_EN : 1;
+    uint8_t reserved_0 : 3;
+    uint8_t REG_WOF_EN : 1;
+  } ICM_20948_INT_ENABLE_t;
 
-/* Bank0 REG_INT_SOURCE0 */
-#define BIT_INT_UI_AGC_RDY_INT1_EN	0x01
-#define BIT_INT_FIFO_FULL_INT1_EN	0x02
-#define BIT_INT_FIFO_THS_INT1_EN	0x04
-#define BIT_INT_UI_DRDY_INT1_EN		0x08
-#define BIT_INT_RESET_DONE_INT1_EN	0x10
-#define BIT_INT_PLL_RDY_INT1_EN		0x20
-#define BIT_INT_UI_FSYNC_INT1_EN	0x40
+  typedef struct
+  {
+    uint8_t RAW_DATA_0_RDY_EN : 1;
+    uint8_t reserved_0 : 7;
+  } ICM_20948_INT_ENABLE_1_t;
 
-/* Bank0 REG_INT_SOURCE1 */
-#define BIT_INT_WOM_X_INT1_EN		0x01
-#define BIT_INT_WOM_Y_INT1_EN		0x02
-#define BIT_INT_WOM_Z_INT1_EN		0x04
-#define BIT_INT_SMD_INT1_EN		0x08
-#define BIT_INT_WOM_XYZ_INT1_EN \
-	(BIT_INT_WOM_X_INT1_EN | BIT_INT_WOM_Y_INT1_EN | BIT_INT_WOM_Z_INT1_EN)
+  typedef union
+  {
+    struct
+    {
+      uint8_t FIFO_OVERFLOW_EN_40 : 5;
+      uint8_t reserved_0 : 3;
+    } grouped;
+    struct
+    {
+      uint8_t FIFO_OVERFLOW_EN_0 : 1;
+      uint8_t FIFO_OVERFLOW_EN_1 : 1;
+      uint8_t FIFO_OVERFLOW_EN_2 : 1;
+      uint8_t FIFO_OVERFLOW_EN_3 : 1;
+      uint8_t FIFO_OVERFLOW_EN_4 : 1;
+      uint8_t reserved_0 : 3;
+    } individual;
+  } ICM_20948_INT_ENABLE_2_t;
 
-/* Bank0 REG_SENSOR_SELFTEST_REG1 */
-#define BIT_ACCEL_SELF_TEST_PASS	0x08
-#define BIT_GYRO_SELF_TEST_PASS		0x04
-#define BIT_ACCEL_SELF_TEST_DONE	0x02
-#define BIT_GYRO_SELF_TEST_DONE		0x01
+  // typedef struct{
+  // 	uint8_t FIFO_OVERFLOW_EN_40		: 5;
+  // 	uint8_t reserved_0				: 3;
+  // }ICM_20948_INT_ENABLE_2_t;
 
-/* Bank0 REG_SELF_TEST_CONFIG */
-#define BIT_SELF_TEST_REGULATOR_EN	0x40
-#define BIT_TEST_AZ_EN			0x20
-#define BIT_TEST_AY_EN			0x10
-#define BIT_TEST_AX_EN			0x08
-#define BIT_TEST_GZ_EN			0x04
-#define BIT_TEST_GY_EN			0x02
-#define BIT_TEST_GX_EN			0x01
+  typedef union
+  {
+    struct
+    {
+      uint8_t FIFO_WM_EN_40 : 5;
+      uint8_t reserved_0 : 3;
+    } grouped;
+    struct
+    {
+      uint8_t FIFO_WM_EN_0 : 1;
+      uint8_t FIFO_WM_EN_1 : 1;
+      uint8_t FIFO_WM_EN_2 : 1;
+      uint8_t FIFO_WM_EN_3 : 1;
+      uint8_t FIFO_WM_EN_4 : 1;
+      uint8_t reserved_0 : 3;
+    } individual;
+  } ICM_20948_INT_ENABLE_3_t;
 
-/* Bank0 REG_INT_STATUS */
-#define BIT_INT_STATUS_AGC_RDY		0x01
-#define BIT_INT_STATUS_FIFO_FULL	0x02
-#define BIT_INT_STATUS_FIFO_THS		0x04
-#define BIT_INT_STATUS_DRDY		0x08
-#define BIT_INT_STATUS_RESET_DONE	0x10
-#define BIT_INT_STATUS_PLL_DRY		0x20
-#define BIT_INT_STATUS_UI_FSYNC		0x40
+  // typedef struct{
+  // 	uint8_t FIFO_WM_EN_40			: 5;
+  // 	uint8_t reserved_0				: 3;
+  // }ICM_20948_INT_ENABLE_3_t;
 
-/* Bank0 REG_INT_STATUS2 */
-#define BIT_INT_STATUS_WOM_X		0x01
-#define BIT_INT_STATUS_WOM_Y		0x02
-#define BIT_INT_STATUS_WOM_Z		0x04
-#define BIT_INT_STATUS_SMD		0x08
-#define BIT_INT_STATUS_WOM_XYZ \
-	(BIT_INT_STATUS_WOM_X | BIT_INT_STATUS_WOM_Y | BIT_INT_STATUS_WOM_Z)
+  typedef struct
+  {
+    uint8_t I2C_PERIPH0_NACK : 1;
+    uint8_t I2C_PERIPH1_NACK : 1;
+    uint8_t I2C_PERIPH2_NACK : 1;
+    uint8_t I2C_PERIPH3_NACK : 1;
+    uint8_t I2C_PERIPH4_NACK : 1;
+    uint8_t I2C_LOST_ARB : 1;
+    uint8_t I2C_PERIPH4_DONE : 1;
+    uint8_t PASS_THROUGH : 1;
+  } ICM_20948_I2C_MST_STATUS_t;
 
-/* Bank0 REG_INT_STATUS3 */
-#define BIT_INT_STATUS_TAP_DET		0x01
-#define BIT_INT_STATUS_SLEEP_DET	0x02
-#define BIT_INT_STATUS_RAISE_DET	0x04
-#define BIT_INT_STATUS_TILT_DET		0x08
-#define BIT_INT_STATUS_STEP_CNT_OVFL	0x10
-#define BIT_INT_STATUS_STEP_DET		0x20
-#define BIT_INT_STATUS_DMP_POWER_SAVE	0x40
+  typedef struct
+  {
+    uint8_t reserved0 : 1;
+    uint8_t DMP_INT_Motion_Detect_SMD : 1;
+    uint8_t reserved1 : 1;
+    uint8_t DMP_INT_Tilt_Event : 1;
+    uint8_t reserved2 : 4;
+  } ICM_20948_DMP_INT_STATUS_t; // Mostly guesswork from InvenSense App Note
 
-/* Bank0 REG_FIFO_CONFIG_REG */
-#define BIT_FIFO_MODE_BYPASS		0x00
-#define BIT_FIFO_MODE_STREAM		0x40
-#define BIT_FIFO_MODE_STOP_FULL		0x80
+  typedef struct
+  {
+    uint8_t I2C_MST_INT : 1;
+    uint8_t DMP_INT1 : 1;
+    uint8_t PLL_RDY_INT : 1;
+    uint8_t WOM_INT : 1;
+    uint8_t reserved_0 : 4;
+  } ICM_20948_INT_STATUS_t;
 
-/* Bank0 REG_GYRO_ACCEL_CONFIG0 */
-#define BIT_ACCEL_UI_LNM_BW_2_FIR	0x00
-#define BIT_ACCEL_UI_LNM_BW_4_IIR	0x10
-#define BIT_ACCEL_UI_LNM_BW_5_IIR	0x20
-#define BIT_ACCEL_UI_LNM_BW_8_IIR	0x30
-#define BIT_ACCEL_UI_LNM_BW_10_IIR	0x40
-#define BIT_ACCEL_UI_LNM_BW_16_IIR	0x50
-#define BIT_ACCEL_UI_LNM_BW_20_IIR	0x60
-#define BIT_ACCEL_UI_LNM_BW_40_IIR	0x70
-#define BIT_ACCEL_UI_LNM_AVG_1		0xF0
-#define BIT_ACCEL_UI_LPM_BW_2_FIR	0x00
-#define BIT_ACCEL_UI_LPM_AVG_1		0x10
-#define BIT_ACCEL_UI_LPM_AVG_2		0x20
-#define BIT_ACCEL_UI_LPM_AVG_3		0x30
-#define BIT_ACCEL_UI_LPM_AVG_4		0x40
-#define BIT_ACCEL_UI_LPM_AVG_8		0x50
-#define BIT_ACCEL_UI_LPM_AVG_16		0x60
-#define BIT_ACCEL_UI_LPM_AVG_32		0x70
-#define BIT_ACCEL_UI_LPM_AVG_64		0x80
-#define BIT_ACCEL_UI_LPM_AVG_128	0x90
-#define BIT_GYRO_UI_LNM_BW_2_FIR	0x00
-#define BIT_GYRO_UI_LNM_BW_4_IIR	0x01
-#define BIT_GYRO_UI_LNM_BW_5_IIR	0x02
-#define BIT_GYRO_UI_LNM_BW_8_IIR	0x03
-#define BIT_GYRO_UI_LNM_BW_10_IIR	0x04
-#define BIT_GYRO_UI_LNM_BW_16_IIR	0x05
-#define BIT_GYRO_UI_LNM_BW_20_IIR	0x06
-#define BIT_GYRO_UI_LNM_BW_40_IIR	0x07
-#define BIT_GYRO_UI_LNM_AVG_1		0xF0
-#define BIT_GYRO_UI_LPM_BW_2_FIR	0x00
-#define BIT_GYRO_UI_LPM_AVG_1		0x01
-#define BIT_GYRO_UI_LPM_AVG_2		0x02
-#define BIT_GYRO_UI_LPM_AVG_3		0x03
-#define BIT_GYRO_UI_LPM_AVG_4		0x04
-#define BIT_GYRO_UI_LPM_AVG_8		0x05
-#define BIT_GYRO_UI_LPM_AVG_16		0x06
-#define BIT_GYRO_UI_LPM_AVG_32		0x07
-#define BIT_GYRO_UI_LPM_AVG_64		0x08
-#define BIT_GYRO_UI_LPM_AVG_128		0x09
+  typedef struct
+  {
+    uint8_t RAW_DATA_0_RDY_INT : 1;
+    uint8_t reserved_0 : 7;
+  } ICM_20948_INT_STATUS_1_t;
 
-/* Bank0 REG_SMD_CONFIG */
-#define BIT_WOM_INT_MODE_OR		0x00
-#define BIT_WOM_INT_MODE_AND		0x08
-#define BIT_WOM_MODE_INITIAL		0x00
-#define BIT_WOM_MODE_PREV		0x04
-#define BIT_SMD_MODE_OFF		0x00
-#define BIT_SMD_MODE_OLD		0x01
-#define BIT_SMD_MODE_SHORT		0x02
-#define BIT_SMD_MODE_LONG		0x03
+  // typedef union{
+  // 	struct{
+  // 		uint8_t FIFO_OVERFLOW_INT_40	: 5;
+  // 		uint8_t reserved_0				: 3;
+  // 	}grouped;
+  // 	struct{
+  // 		uint8_t FIFO_OVERFLOW_INT_0 	: 1;
+  // 		uint8_t FIFO_OVERFLOW_INT_1 	: 1;
+  // 		uint8_t FIFO_OVERFLOW_INT_2 	: 1;
+  // 		uint8_t FIFO_OVERFLOW_INT_3 	: 1;
+  // 		uint8_t FIFO_OVERFLOW_INT_4 	: 1;
+  // 		uint8_t reserved_0				: 3;
+  // 	}individual;
+  // }ICM_20948_INT_STATUS_2_t;
 
-/* Bank0 REG_TMST_CONFIG */
-#define BIT_FIFO_RAM_ISO_ENA		0x40
-#define BIT_EN_DREG_FIFO_D2A		0x20
-#define BIT_TMST_TO_REGS_EN		0x10
-#define BIT_TMST_RESOL			0x08
-#define BIT_TMST_DELTA_EN		0x04
-#define BIT_TMST_FSYNC_EN		0x02
-#define BIT_TMST_EN			0x01
+  typedef struct
+  {
+    uint8_t FIFO_OVERFLOW_INT_40 : 5;
+    uint8_t reserved_0 : 3;
+  } ICM_20948_INT_STATUS_2_t;
 
-/* Bank0 REG_APEX_CONFIG0 */
-#define BIT_DMP_ODR_25HZ		0x00
-#define BIT_DMP_ODR_50HZ		0x02
-#define BIT_DMP_ODR_100HZ		0x03
-#define BIT_RAISE_ENABLE		0x08
-#define BIT_TILT_ENABLE			0x10
-#define BIT_PEDO_ENABLE			0x20
-#define BIT_TAP_ENABLE			0x40
-#define BIT_DMP_POWER_SAVE_EN		0x80
+  // typedef union{
+  // 	struct{
+  // 		uint8_t FIFO_WM_INT_40	: 5;
+  // 		uint8_t reserved_0				: 3;
+  // 	}grouped;
+  // 	struct{
+  // 		uint8_t FIFO_WM_INT_0 	: 1;
+  // 		uint8_t FIFO_WM_INT_1 	: 1;
+  // 		uint8_t FIFO_WM_INT_2 	: 1;
+  // 		uint8_t FIFO_WM_INT_3 	: 1;
+  // 		uint8_t FIFO_WM_INT_4 	: 1;
+  // 		uint8_t reserved_0				: 3;
+  // 	}individual;
+  // }ICM_20948_INT_STATUS_3_t;
 
-/* Bank0 REG_ACCEL_CONFIG0 */
-#define BIT_ACCEL_FSR			0xE0
-#define BIT_ACCEL_ODR			0x0F
+  typedef struct
+  {
+    uint8_t FIFO_WM_INT40 : 5;
+    uint8_t reserved_0 : 3;
+  } ICM_20948_INT_STATUS_3_t;
 
-#define BIT_ACCEL_ODR_8000		0x03
-#define BIT_ACCEL_ODR_4000		0x04
-#define BIT_ACCEL_ODR_2000		0x05
-#define BIT_ACCEL_ODR_1000		0x06
-#define BIT_ACCEL_ODR_500		0x0F
-#define BIT_ACCEL_ODR_200		0x07
-#define BIT_ACCEL_ODR_100		0x08
-#define BIT_ACCEL_ODR_50		0x09
-#define BIT_ACCEL_ODR_25		0x0A
-#define BIT_ACCEL_ODR_12		0x0B
-#define BIT_ACCEL_ODR_6			0x0C
-#define BIT_ACCEL_ODR_3			0x0D
-#define BIT_ACCEL_ODR_1			0x0E
+  typedef struct
+  {
+    uint8_t DELAY_TIMEH;
+  } ICM_20948_DELAY_TIMEH_t;
 
-/* Bank0 REG_GYRO_CONFIG0 */
-#define BIT_GYRO_FSR			0xE0
-#define BIT_GYRO_ODR			0x0F
-#define BIT_GYRO_ODR_8000		0x03
-#define BIT_GYRO_ODR_4000		0x04
-#define BIT_GYRO_ODR_2000		0x05
-#define BIT_GYRO_ODR_1000		0x06
-#define BIT_GYRO_ODR_500		0x0F
-#define BIT_GYRO_ODR_200		0x07
-#define BIT_GYRO_ODR_100		0x08
-#define BIT_GYRO_ODR_50			0x09
-#define BIT_GYRO_ODR_25			0x0A
-#define BIT_GYRO_ODR_12			0x0B
+  typedef struct
+  {
+    uint8_t DELAY_TIMEL;
+  } ICM_20948_DELAY_TIMEL_t;
 
-/* Bank1 REG_INTF_CONFIG5 */
-#define BIT_PIN9_FUNC_INT2		0x00
-#define BIT_PIN9_FUNC_FSYNC		0x02
-#define BIT_PIN9_FUNC_CLKIN		0x04
-#define BIT_PIN9_FUNC_RSV		0x06
+  typedef struct
+  {
+    uint8_t ACCEL_XOUT_H;
+  } ICM_20948_ACCEL_XOUT_H_t;
 
-/* Bank4 REG_DRV_GYR_CFG0_REG */
-#define GYRO_DRV_TEST_FSMFORCE_D2A_LINEAR_START_MODE		0x0D
-#define GYRO_DRV_TEST_FSMFORCE_D2A_STEADY_STATE_AGC_REG_MODE	0x2A
+  typedef struct
+  {
+    uint8_t ACCEL_XOUT_L;
+  } ICM_20948_ACCEL_XOUT_L_t;
 
-/* Bank4 REG_DRV_GYR_CFG2_REG */
-#define GYRO_DRV_SPARE2_D2A_EN		0x01
+  typedef struct
+  {
+    uint8_t ACCEL_YOUT_H;
+  } ICM_20948_ACCEL_YOUT_H_t;
 
-/* Bank4 REG_INT_SOURCE6 */
-#define BIT_INT_TAP_DET_INT1_EN		0x01
-#define BIT_INT_SLEEP_DET_INT1_EN	0x02
-#define BIT_INT_RAISE_DET_INT1_EN	0x04
-#define BIT_INT_TILT_DET_INT1_EN	0x08
-#define BIT_INT_STEP_CNT_OVFL_INT1_EN	0x10
-#define BIT_INT_STEP_DET_INT1_EN	0x20
-#define BIT_INT_DMP_POWER_SAVE_INT1_EN	0x40
+  typedef struct
+  {
+    uint8_t ACCEL_YOUT_L;
+  } ICM_20948_ACCEL_YOUT_L_t;
 
-/* Bank4 REG_INT_SOURCE7 */
-#define BIT_INT_TAP_DET_INT2_EN		0x01
-#define BIT_INT_HIGHG_DET_INT2_EN	0x02
-#define BIT_INT_LOWG_DET_INT2_EN	0x04
-#define BIT_INT_TILT_DET_INT2_EN	0x80
-#define BIT_INT_STEP_CNT_OVFL_INT2_EN	0x10
-#define BIT_INT_STEP_DET_INT2_EN	0x20
-#define BIT_INT_DMP_POWER_SAVE_INT2_EN	0x40
+  typedef struct
+  {
+    uint8_t ACCEL_ZOUT_H;
+  } ICM_20948_ACCEL_ZOUT_H_t;
 
-/* Bank4 REG_INT_SOURCE8 */
-#define BIT_INT_AGC_RDY_IBI_EN		0x01
-#define BIT_INT_FIFO_FULL_IBI_EN	0x02
-#define BIT_INT_FIFO_THS_IBI_EN		0x04
-#define BIT_INT_UI_DRDY_IBI_EN		0x08
-#define BIT_INT_PLL_RDY_IBI_EN		0x10
-#define BIT_INT_FSYNC_IBI_EN		0x20
-#define BIT_INT_OIS1_DRDY_IBI_EN	0x40
+  typedef struct
+  {
+    uint8_t ACCEL_ZOUT_L;
+  } ICM_20948_ACCEL_ZOUT_L_t;
 
-/* Bank4 REG_INT_SOURCE9 */
-#define BIT_INT_DMP_POWER_SAVE_IBI_EN	0x01
-#define BIT_INT_WOM_X_IBI_EN		0x02
-#define BIT_INT_WOM_Y_IBI_EN		0x04
-#define BIT_INT_WOM_Z_IBI_EN		0x08
-#define BIT_INT_SMD_IBI_EN		0x10
+  typedef struct
+  {
+    uint8_t GYRO_XOUT_H;
+  } ICM_20948_GYRO_XOUT_H_t;
 
-/* Bank4 REG_INT_SOURCE10 */
-#define BIT_INT_TAP_DET_IBI_EN		0x01
-#define BIT_INT_HIGHG_DET_IBI_EN	0x02
-#define BIT_INT_LOWG_DET_IBI_EN		0x04
-#define BIT_INT_TILT_DET_IBI_EN		0x08
-#define BIT_INT_STEP_CNT_OVFL_IBI_EN	0x10
-#define BIT_INT_STEP_DET_IBI_EN		0x20
+  typedef struct
+  {
+    uint8_t GYRO_XOUT_L;
+  } ICM_20948_GYRO_XOUT_L_t;
 
-/* fifo data packet header */
-#define BIT_FIFO_HEAD_MSG		0x80
-#define BIT_FIFO_HEAD_ACCEL		0x40
-#define BIT_FIFO_HEAD_GYRO		0x20
-#define BIT_FIFO_HEAD_20		0x10
-#define BIT_FIFO_HEAD_TMSP_ODR		0x08
-#define BIT_FIFO_HEAD_TMSP_NO_ODR	0x04
-#define BIT_FIFO_HEAD_TMSP_FSYNC	0x0C
-#define BIT_FIFO_HEAD_ODR_ACCEL		0x02
-#define BIT_FIFO_HEAD_ODR_GYRO		0x01
+  typedef struct
+  {
+    uint8_t GYRO_YOUT_H;
+  } ICM_20948_GYRO_YOUT_H_t;
 
-/* data definitions */
-#define FIFO_PACKET_BYTE_SINGLE		8
-#define FIFO_PACKET_BYTE_6X		16
-#define FIFO_PACKET_BYTE_HIRES		20
-#define FIFO_COUNT_BYTE			2
+  typedef struct
+  {
+    uint8_t GYRO_YOUT_L;
+  } ICM_20948_GYRO_YOUT_L_t;
 
-/* sensor startup time */
-#define INV_ICM42600_GYRO_START_TIME	100
-#define INV_ICM42600_ACCEL_START_TIME	50
+  typedef struct
+  {
+    uint8_t GYRO_ZOUT_H;
+  } ICM_20948_GYRO_ZOUT_H_t;
 
-/* temperature sensor */
-/* scale by 100, 1LSB=1degC, 9447 */
-#define TEMP_SCALE			100
-/* 25 degC */
-#define TEMP_OFFSET			(25 * TEMP_SCALE)
+  typedef struct
+  {
+    uint8_t GYRO_ZOUT_L;
+  } ICM_20948_GYRO_ZOUT_L_t;
 
-#ifdef SUPPORT_RTC_MODE
-#define BASE_SAMPLE_RATE		(RTC_FREQ_HZ / 32)
-#else
-#define BASE_SAMPLE_RATE		1000
-#endif
-#define GESTURE_ACCEL_RATE		50
-#define ESI_GYRO_RATE			1000
-#define MPU_INIT_SENSOR_RATE_LNM	12	/* min Hz in LNM */
-#define MPU_INIT_SENSOR_RATE_LPM	3	/* min Hz in LPM */
-#define MAX_FIFO_PACKET_READ		16
-#define HARDWARE_FIFO_SIZE		2048
-#define FIFO_SIZE			(HARDWARE_FIFO_SIZE * 7 / 8)
-#define LEFT_OVER_BYTES			128
-#define POWER_UP_TIME			100
-#define REG_UP_TIME_USEC		100
-#define IIO_BUFFER_BYTES		8
-#define BYTES_PER_SENSOR		6
-#define BYTES_FOR_TEMP			1
-#define MAX_BATCH_FIFO_SIZE		FIFO_SIZE
-#define FIRST_DROP_SAMPLES_ACC_500HZ	20
-#define FIRST_DROP_SAMPLES_ACC_200HZ	10
-#define FIRST_DROP_SAMPLES_GYR_500HZ	20
-#define FIRST_DROP_SAMPLES_GYR_200HZ	10
-#define WOM_THRESHOLD			13 /* 1000 / 256 * 13 = 50.7mg */
+  typedef struct
+  {
+    uint8_t TEMP_OUT_H;
+  } ICM_20948_TEMP_OUT_H_t;
 
-#define BIT_GYRO_FSR			0xE0
-#define BIT_GYRO_ODR			0x0F
-#define BIT_ACCEL_FSR			0xE0
-#define BIT_ACCEL_ODR			0x0F
+  typedef struct
+  {
+    uint8_t TEMP_OUT_L;
+  } ICM_20948_TEMP_OUT_L_t;
 
-#define FIFO_ACCEL0_RESET_VALUE		0x80
-#define FIFO_ACCEL1_RESET_VALUE		0x00
-#define FIFO_GYRO0_RESET_VALUE		0x80
-#define FIFO_GYRO1_RESET_VALUE		0x00
+  typedef struct
+  {
+    uint8_t DATA; // Note: this is not worth copying 24 times, despite there being 24 registers like this one
+  } ICM_20948_EXT_PERIPH_SENS_DATA_t;
 
-#define APEX_TAP			0x08
-#define APEX_DOUBLE_TAP			0x10
+  typedef struct
+  {
+    uint8_t PERIPH_0_FIFO_EN : 1;
+    uint8_t PERIPH_1_FIFO_EN : 1;
+    uint8_t PERIPH_2_FIFO_EN : 1;
+    uint8_t PERIPH_3_FIFO_EN : 1;
+    uint8_t reserved_0 : 4;
+  } ICM_20948_FIFO_EN_1_t;
 
-/*
- * INT configurations
- * Polarity: 0 -> Active Low, 1 -> Active High
- * Drive circuit: 0 -> Open Drain, 1 -> Push-Pull
- * Mode: 0 -> Pulse, 1 -> Latch
- */
-#define INT_POLARITY			1
-#define INT_DRIVE_CIRCUIT		1
-#define INT_MODE			0
+  typedef struct
+  {
+    uint8_t TEMP_FIFO_EN : 1;
+    uint8_t GYRO_X_FIFO_EN : 1;
+    uint8_t GYRO_Y_FIFO_EN : 1;
+    uint8_t GYRO_Z_FIFO_EN : 1;
+    uint8_t ACCEL_FIFO_EN : 1;
+    uint8_t reserved_0 : 3;
+  } ICM_20948_FIFO_EN_2_t;
 
-#define ACC_LPM_MAX_RATE		500
-#define GYR_LPM_MAX_RATE		200
+  typedef struct
+  {
+    uint8_t FIFO_RESET : 5;
+    uint8_t reserved_0 : 3;
+  } ICM_20948_FIFO_RST_t;
 
-enum {
-	GYRO_FS_2000DPS = 0,
-	GYRO_FS_1000DPS,
-	GYRO_FS_500DPS,
-	GYRO_FS_250DPS,
-	GYRO_FS_125DPS,
-	GYRO_FS_62DPS,
-	GYRO_FS_32DPS,
-	GYRO_FS_15DPS,
-};
+  typedef struct
+  {
+    uint8_t FIFO_MODE : 5;
+    uint8_t reserved_0 : 3;
+  } ICM_20948_FIFO_MODE_t;
 
-enum {
-	ACCEL_FS_16G = 0,
-	ACCEL_FS_8G,
-	ACCEL_FS_4G,
-	ACCEL_FS_2G,
-};
+  typedef struct
+  {
+    uint8_t FIFO_COUNTH;
+  } ICM_20948_FIFO_COUNTH_t;
 
-#endif /* __SENSOR_ICM20948_ICM20948_REG__ */
+  typedef struct
+  {
+    uint8_t FIFO_COUNTL;
+  } ICM_20948_FIFO_COUNTL_t;
+
+  typedef struct
+  {
+    uint8_t RAW_DATA_RDY : 4;
+    uint8_t reserved_0 : 3;
+    uint8_t WOF_STATUS : 1;
+  } ICM_20948_DATA_RDY_STATUS_t;
+
+  typedef struct
+  {
+    uint8_t FIFO_CFG : 1;
+    uint8_t reserved_0 : 7;
+  } ICM_20948_FIFO_CFG_t;
+
+  // User bank 1 Types
+
+  typedef struct
+  {
+    uint8_t XG_ST_DATA;
+  } ICM_20948_SELF_TEST_X_GYRO_t;
+
+  typedef struct
+  {
+    uint8_t YG_ST_DATA;
+  } ICM_20948_SELF_TEST_Y_GYRO_t;
+
+  typedef struct
+  {
+    uint8_t ZG_ST_DATA;
+  } ICM_20948_SELF_TEST_Z_GYRO_t;
+
+  typedef struct
+  {
+    uint8_t XA_ST_DATA;
+  } ICM_20948_SELF_TEST_X_ACCEL_t;
+
+  typedef struct
+  {
+    uint8_t YA_ST_DATA;
+  } ICM_20948_SELF_TEST_Y_ACCEL_t;
+
+  typedef struct
+  {
+    uint8_t ZA_ST_DATA;
+  } ICM_20948_SELF_TEST_Z_ACCEL_t;
+
+  typedef struct
+  {
+    uint8_t XA_OFFS_14_7;
+  } ICM_20948_XA_OFFS_H_t;
+
+  typedef struct
+  {
+    uint8_t reserved_0 : 1;
+    uint8_t XA_OFFS_6_0 : 7;
+  } ICM_20948_XA_OFFS_L_t;
+
+  typedef struct
+  {
+    uint8_t YA_OFFS_14_7;
+  } ICM_20948_YA_OFFS_H_t;
+
+  typedef struct
+  {
+    uint8_t reserved_0 : 1;
+    uint8_t YA_OFFS_6_0 : 7;
+  } ICM_20948_YA_OFFS_L_t;
+
+  typedef struct
+  {
+    uint8_t ZA_OFFS_14_7;
+  } ICM_20948_ZA_OFFS_H_t;
+
+  typedef struct
+  {
+    uint8_t reserved_0 : 1;
+    uint8_t ZA_OFFS_6_0 : 7;
+  } ICM_20948_ZA_OFFS_L_t;
+
+  typedef struct
+  {
+    uint8_t TBC_PLL;
+  } ICM_20948_TIMEBASE_CORRECTION_PLL_t;
+
+  // User Bank 2 Types
+  typedef struct
+  {
+    uint8_t GYRO_SMPLRT_DIV;
+  } ICM_20948_GYRO_SMPLRT_DIV_t;
+
+  typedef struct
+  {
+    uint8_t GYRO_FCHOICE : 1;
+    uint8_t GYRO_FS_SEL : 2;
+    uint8_t GYRO_DLPFCFG : 3;
+    uint8_t reserved_0 : 2;
+  } ICM_20948_GYRO_CONFIG_1_t;
+
+  typedef struct
+  {
+    uint8_t GYRO_AVGCFG : 3;
+    uint8_t ZGYRO_CTEN : 1;
+    uint8_t YGYRO_CTEN : 1;
+    uint8_t XGYRO_CTEN : 1;
+    uint8_t reserved_0 : 2;
+  } ICM_20948_GYRO_CONFIG_2_t;
+
+  typedef struct
+  {
+    uint8_t XG_OFFS_USER_H;
+  } ICM_20948_XG_OFFS_USRH_t;
+
+  typedef struct
+  {
+    uint8_t XG_OFFS_USER_L;
+  } ICM_20948_XG_OFFS_USRL_t;
+
+  typedef struct
+  {
+    uint8_t YG_OFFS_USER_H;
+  } ICM_20948_YG_OFFS_USRH_t;
+
+  typedef struct
+  {
+    uint8_t YG_OFFS_USER_L;
+  } ICM_20948_YG_OFFS_USRL_t;
+
+  typedef struct
+  {
+    uint8_t ZG_OFFS_USER_H;
+  } ICM_20948_ZG_OFFS_USRH_t;
+
+  typedef struct
+  {
+    uint8_t ZG_OFFS_USER_L;
+  } ICM_20948_ZG_OFFS_USRL_t;
+
+  typedef struct
+  {
+    uint8_t ODR_ALIGN_EN : 1;
+    uint8_t reserved_0 : 7;
+  } ICM_20948_ODR_ALIGN_EN_t;
+
+  typedef struct
+  {
+    uint8_t ACCEL_SMPLRT_DIV_11_8 : 4;
+    uint8_t reserved_0 : 4;
+  } ICM_20948_ACCEL_SMPLRT_DIV_1_t;
+
+  typedef struct
+  {
+    uint8_t ACCEL_SMPLRT_DIV_7_0;
+  } ICM_20948_ACCEL_SMPLRT_DIV_2_t;
+
+  typedef struct
+  {
+    uint8_t ACCEL_INTEL_MODE_INT : 1;
+    uint8_t ACCEL_INTEL_EN : 1;
+    uint8_t reserved_0 : 6;
+  } ICM_20948_ACCEL_INTEL_CTRL_t;
+
+  typedef struct
+  {
+    uint8_t WOM_THRESHOLD;
+  } ICM_20948_ACCEL_WOM_THR_t;
+
+  typedef struct
+  {
+    uint8_t ACCEL_FCHOICE : 1;
+    uint8_t ACCEL_FS_SEL : 2;
+    uint8_t ACCEL_DLPFCFG : 3;
+    uint8_t reserved_0 : 2;
+  } ICM_20948_ACCEL_CONFIG_t;
+
+  typedef struct
+  {
+    uint8_t DEC3_CFG : 2;
+    uint8_t AZ_ST_EN : 1;
+    uint8_t AY_ST_EN : 1;
+    uint8_t AX_ST_EN : 1;
+    uint8_t reserved_0 : 3;
+  } ICM_20948_ACCEL_CONFIG_2_t;
+
+  typedef struct
+  {
+    uint8_t EXT_SYNC_SET : 4;
+    uint8_t WOF_EDGE_INT : 1;
+    uint8_t WOF_DEGLITCH_EN : 1;
+    uint8_t reserved_0 : 1;
+    uint8_t DELAY_TIME_EN : 1;
+  } ICM_20948_FSYNC_CONFIG_t;
+
+  typedef struct
+  {
+    uint8_t TEMP_DLPFCFG : 3;
+    uint8_t reserved_0 : 5;
+  } ICM_20948_TEMP_CONFIG_t;
+
+  typedef struct
+  {
+    uint8_t REG_LP_DMP_EN : 1;
+    uint8_t reserved_0 : 7;
+  } ICM_20948_MOD_CTRL_USR_t;
+
+  // Bank 3 Types
+
+  typedef struct
+  {
+    uint8_t I2C_MST_ODR_CONFIG : 4;
+    uint8_t reserved_0 : 4;
+  } ICM_20948_I2C_MST_ODR_CONFIG_t;
+
+  typedef struct
+  {
+    uint8_t I2C_MST_CLK : 4;
+    uint8_t I2C_MST_P_NSR : 1;
+    uint8_t reserved_0 : 2;
+    uint8_t MULT_MST_EN : 1;
+  } ICM_20948_I2C_MST_CTRL_t;
+
+  typedef struct
+  {
+    uint8_t I2C_PERIPH0_DELAY_EN : 1;
+    uint8_t I2C_PERIPH1_DELAY_EN : 1;
+    uint8_t I2C_PERIPH2_DELAY_EN : 1;
+    uint8_t I2C_PERIPH3_DELAY_EN : 1;
+    uint8_t I2C_PERIPH4_DELAY_EN : 1;
+    uint8_t reserved_0 : 2;
+    uint8_t DELAY_ES_SHADOW : 1;
+  } ICM_20948_I2C_MST_DELAY_CTRL_t;
+
+  typedef struct
+  {
+    uint8_t ID : 7;
+    uint8_t RNW : 1;
+  } ICM_20948_I2C_PERIPHX_ADDR_t;
+
+  typedef struct
+  {
+    uint8_t REG;
+  } ICM_20948_I2C_PERIPHX_REG_t;
+
+  typedef struct
+  {
+    uint8_t LENG : 4;
+    uint8_t GRP : 1;
+    uint8_t REG_DIS : 1;
+    uint8_t BYTE_SW : 1;
+    uint8_t EN : 1;
+  } ICM_20948_I2C_PERIPHX_CTRL_t;
+
+  typedef struct
+  {
+    uint8_t DO;
+  } ICM_20948_I2C_PERIPHX_DO_t;
+
+  typedef struct
+  {
+    uint8_t DLY : 5;
+    uint8_t REG_DIS : 1;
+    uint8_t INT_EN : 1;
+    uint8_t EN : 1;
+  } ICM_20948_I2C_PERIPH4_CTRL_t;
+
+  typedef struct
+  {
+    uint8_t DI;
+  } ICM_20948_I2C_PERIPH4_DI_t;
+
+  // Bank select register!
+
+  typedef struct
+  {
+    uint8_t reserved_0 : 4;
+    uint8_t USER_BANK : 2;
+    uint8_t reserved_1 : 2;
+  } ICM_20948_REG_BANK_SEL_t;
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* _ICM_20948_REGISTERS_H_ */
