@@ -3,6 +3,9 @@
 #include <drivers/sensor.h>
 #include <stdio.h>
 
+/* 1000 msec = 1 sec */
+#define SLEEP_TIME_MS   1000
+
 /* static const char *now_str(void) */
 /* { */
 /* 	static char buf[16]; /\* ...HH:MM:SS.MMM *\/ */
@@ -126,13 +129,23 @@ void main(void)
 	/* } */
 
         printf("Configured for sensor sampling.\n");
-                
-        struct sensor_value accel[3];
- 	int rc = sensor_sample_fetch(icm20948);
-        printf("sensor_sample_fetch, rc=%d.\n", rc);
 
-	if (rc == 0) {
-                rc = sensor_channel_get(icm20948, SENSOR_CHAN_ACCEL_XYZ, accel);
-                printf("sensor_channel_get, rc=%d.\n", rc);
-        }
+        int rc;
+        while (1) {
+            rc = icm_20948_data_ready(icm20948);
+            if (rc != 0) {
+                printf("not ready, rc=%d.\n", rc);
+            } else {
+                    struct sensor_value accel[3];
+                    int rc = sensor_sample_fetch(icm20948);
+                    printf("sensor_sample_fetch, rc=%d.\n", rc);
+
+                    if (rc == 0) {
+                        rc = sensor_channel_get(icm20948, SENSOR_CHAN_ACCEL_XYZ, accel);
+                        printf("sensor_channel_get, rc=%d.\n", rc);
+                    }
+            }
+
+            k_msleep(SLEEP_TIME_MS);
+	}
 }

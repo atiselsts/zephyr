@@ -14,88 +14,67 @@
 
 LOG_MODULE_DECLARE(ICM20948, CONFIG_SENSOR_LOG_LEVEL);
 
-int icm20948_sensor_init(const struct device *dev)
+int icm20948_sensor_init(const struct device *cdev)
 {
 	int result = 0;
 	uint8_t v;
+        struct device *dev = (struct device *)cdev;
 
 	result = inv_spi_read(REG_WHO_AM_I, &v, 1);
-
 	if (result) {
 		return result;
 	}
 
-	LOG_ERR("WHO AM I : 0x%X", v);
+	LOG_DBG("WHO AM I : 0x%X", v);
 
-	/* result = inv_spi_read(REG_DEVICE_CONFIG, &v, 1); */
+        result = ICM_20948_sw_reset(dev);
+        if (result) {
+		return result; 
+        }
 
-	/* if (result) { */
-	/* 	LOG_DBG("read REG_DEVICE_CONFIG_REG failed"); */
-	/* 	return result; */
-	/* } */
+        /* Need to delay after soft reset */
+	k_msleep(50);
 
-	/* v |= BIT_SOFT_RESET; */
+        result = ICM_20948_sleep(dev, false);
+        if (result) {
+		return result; 
+        }
 
-	/* result = inv_spi_single_write(REG_DEVICE_CONFIG, &v); */
+        result = ICM_20948_low_power(dev, false);
+        if (result) {
+		return result; 
+        }
 
-	/* if (result) { */
-	/* 	LOG_ERR("write REG_DEVICE_CONFIG failed"); */
-	/* 	return result; */
-	/* } */
+        /* result = startup_magnetometer(false); */
+        /* if (result) { */
+        /*     return result;  */
+        /* } */
 
-	/* /\* Need at least 10ms after soft reset *\/ */
-	/* k_msleep(10); */
+        result = ICM_20948_set_sample_mode(dev, ICM_20948_Internal_Acc | ICM_20948_Internal_Gyr, ICM_20948_Sample_Mode_Continuous);
+        if (result) {
+            return result; 
+        }
 
-	/* v = BIT_GYRO_AFSR_MODE_HFS | BIT_ACCEL_AFSR_MODE_HFS | BIT_CLK_SEL_PLL; */
+        ICM_20948_fss_t FSS;
+        FSS.a = gpm2;   // (ICM_20948_ACCEL_CONFIG_FS_SEL_e)
+        FSS.g = dps250; // (ICM_20948_GYRO_CONFIG_1_FS_SEL_e)
+        result = ICM_20948_set_full_scale(dev, ICM_20948_Internal_Acc | ICM_20948_Internal_Gyr, FSS);
+        if (result) {
+            return result; 
+        }
 
-	/* result = inv_spi_single_write(REG_INTF_CONFIG1, &v); */
+        ICM_20948_dlpcfg_t dlpcfg;
+        dlpcfg.a = acc_d473bw_n499bw;
+        dlpcfg.g = gyr_d361bw4_n376bw5;
+        result = ICM_20948_set_dlpf_cfg(dev, ICM_20948_Internal_Acc | ICM_20948_Internal_Gyr, dlpcfg);
+        if (result) {
+            return result; 
+        }
 
-	/* if (result) { */
-	/* 	LOG_ERR("write REG_INTF_CONFIG1 failed"); */
-	/* 	return result; */
-	/* } */
-
-	/* v = BIT_EN_DREG_FIFO_D2A | */
-	/*     BIT_TMST_TO_REGS_EN | */
-	/*     BIT_TMST_EN; */
-
-	/* result = inv_spi_single_write(REG_TMST_CONFIG, &v); */
-
-	/* if (result) { */
-	/* 	LOG_ERR("Write REG_TMST_CONFIG failed"); */
-	/* 	return result; */
-	/* } */
-
-	/* result = inv_spi_read(REG_INTF_CONFIG0, &v, 1); */
-
-	/* if (result) { */
-	/* 	LOG_ERR("Read REG_INTF_CONFIG0 failed"); */
-	/* 	return result; */
-	/* } */
-
-	/* LOG_DBG("Read REG_INTF_CONFIG0 0x%X", v); */
-
-	/* v |= BIT_UI_SIFS_DISABLE_I2C; */
-
-	/* result = inv_spi_single_write(REG_INTF_CONFIG0, &v); */
-
-	/* if (result) { */
-	/* 	LOG_ERR("Write REG_INTF_CONFIG failed"); */
-	/* 	return result; */
-	/* } */
-
-	/* v = 0; */
-	/* result = inv_spi_single_write(REG_INT_CONFIG1, &v); */
-
-	/* if (result) { */
-	/* 	return result; */
-	/* } */
-
-	/* result = inv_spi_single_write(REG_PWR_MGMT0, &v); */
-
-	/* if (result) { */
-	/* 	return result; */
-	/* } */
+        result = ICM_20948_enable_dlpf(dev, ICM_20948_Internal_Acc, false);
+        if (result) {
+            return result; 
+        }
 
 	return 0;
 }
