@@ -138,11 +138,17 @@ void main(void)
             } else {
                     struct sensor_value accel[3];
                     int rc = sensor_sample_fetch(icm20948);
-                    printf("sensor_sample_fetch, rc=%d.\n", rc);
 
                     if (rc == 0) {
                         rc = sensor_channel_get(icm20948, SENSOR_CHAN_ACCEL_XYZ, accel);
-                        printf("sensor_channel_get, rc=%d.\n", rc);
+                        if (rc == 0) {
+                            printf("  x=%d y=%d z=%d\n",
+                                    accel[0].val1, accel[1].val1, accel[2].val1);
+                        } else {
+                            printf("sensor_channel_get, rc=%d.\n", rc);
+                        }
+                    } else {
+                        printf("sensor_sample_fetch, rc=%d.\n", rc);
                     }
             }
 

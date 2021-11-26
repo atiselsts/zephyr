@@ -6,14 +6,16 @@ MOSI:  P1.04
 MISO:  P0.21
 INT:   P0.22
 */
-&spi1 {
+
+&spi2 {
 	compatible = "nordic,nrf-spim";
 	status = "okay";
-	sck-pin = <38>; /* Port 1, pin 6 */
-	mosi-pin = <36>; /* Port 1, pin 4 */
-	miso-pin = <21>; /* Port 0, pin 21 */
 	cs-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>; /* Port 1, pin 8 */
-	icm20948@0 {
+        sck-pin = <38>;
+	miso-pin = <46>; /* was 21 0.21 */
+	mosi-pin = <36>;
+        clock-frequency = <1000000>;
+	icm20948@1 {
 		compatible = "invensense,icm20948";
 		spi-max-frequency = <1000000>;
 		reg = <0>;

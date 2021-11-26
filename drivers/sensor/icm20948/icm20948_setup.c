@@ -20,6 +20,7 @@ int icm20948_sensor_init(const struct device *cdev)
 	uint8_t v;
         struct device *dev = (struct device *)cdev;
 
+        ICM_20948_set_bank(dev, 0); // Must be in the right bank
 	result = inv_spi_read(REG_WHO_AM_I, &v, 1);
 	if (result) {
 		return result;

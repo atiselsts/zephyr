@@ -64,7 +64,7 @@ ICM_20948_Status_e ICM_20948_set_bank(struct device *dev, uint8_t bank)
 
   if (bank == pdev->_last_bank) // Do we need to change bank?
     return ICM_20948_Stat_Ok;   // Bail if we don't need to change bank to avoid unnecessary bus traffic
-
+  
   pdev->_last_bank = bank;   // Store the requested bank (before we bit-shift)
   bank = (bank << 4) & 0x30; // bits 5:4 of REG_BANK_SEL
   return ICM_20948_execute_w(dev, REG_BANK_SEL, &bank, 1);
@@ -703,6 +703,9 @@ static int icm20948_data_init(struct icm20948_data *data,
 	/* data->tap_en = false; */
 	data->sensor_started = false;
 
+        data->_last_bank = 0xff;
+        data->_last_mems_bank = 0xff;
+
 	return 0;
 }
 
@@ -713,6 +716,8 @@ static int icm20948_init(const struct device *dev)
 	const struct icm20948_config *cfg = dev->config;
 
         LOG_ERR("icm20948_init");
+
+        printf("spi label=%s, gpio dev=%s\n", cfg->spi_label, cfg->gpio_label);
 
 	drv_data->spi = device_get_binding(cfg->spi_label);
 	if (!drv_data->spi) {
@@ -733,10 +738,12 @@ static int icm20948_init(const struct device *dev)
 
 	drv_data->spi_cfg.frequency = cfg->frequency;
 	drv_data->spi_cfg.slave = cfg->slave;
-	drv_data->spi_cfg.operation = (SPI_OP_MODE_MASTER | SPI_MODE_CPOL |
-			SPI_MODE_CPHA | SPI_WORD_SET(8) | SPI_LINES_SINGLE |
+	drv_data->spi_cfg.operation = (SPI_OP_MODE_MASTER | /* SPI_MODE_CPOL |
+                                                            SPI_MODE_CPHA | */ SPI_WORD_SET(8) | SPI_LINES_SINGLE |
 			SPI_TRANSFER_MSB);
 	drv_data->spi_cfg.cs = &drv_data->spi_cs;
+
+        printf("CS=%d, slave=%d\n", cfg->gpio_pin, cfg->slave);
 
 	icm20948_spi_init(drv_data->spi, &drv_data->spi_cfg);
 	icm20948_data_init(drv_data, cfg);
@@ -752,7 +759,7 @@ static int icm20948_init(const struct device *dev)
 /* 	} */
 /* #endif */
 
-	LOG_ERR("Initialize interrupt done"); // used to be LOG_DBG
+	LOG_DBG("Initialize interrupt done");
 
 	return 0;
 }

@@ -89,6 +89,8 @@ int icm20948_spi_init(const struct device *spi_device,
 	__ASSERT_NO_MSG(spi_device);
 	__ASSERT_NO_MSG(spi_config);
 
+        printf("SPI operation: 0x%x\n", spi_config->operation);
+
 	spi_dev = spi_device;
 	spi_cfg = spi_config;
 
