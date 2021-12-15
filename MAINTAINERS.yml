@@ -151,7 +151,6 @@ ARM64 arch:
         - carlocaione
     collaborators:
         - npitre
-        - ioannisg
         - povergoing
     files:
         - arch/arm64/
@@ -168,7 +167,7 @@ Bluetooth:
     maintainers:
         - jhedberg
     collaborators:
-        - joerchan
+        - alwa-nordic
         - Vudentz
         - Thalley
         - asbjornsabo
@@ -196,6 +195,10 @@ Bluetooth controller:
     collaborators:
         - carlescufi
         - thoh-ot
+        - kruithofa
+        - ppryga
+        - mtpr-ot
+        - wopu-ot
     files:
         - subsys/bluetooth/controller/
     labels:
@@ -207,6 +210,9 @@ Bluetooth Mesh:
         - trond-snekvik
     collaborators:
         - jhedberg
+        - LingaoM
+        - alxelax
+        - PavelVPV
     files:
         - subsys/bluetooth/mesh/
         - include/bluetooth/mesh/
@@ -219,7 +225,9 @@ Build system:
     maintainers:
         - tejlmand
     collaborators:
+        - jeremybettis
         - nashif
+        - SebastianBoe
     files:
         - cmake/
         - CMakeLists.txt
@@ -276,7 +284,6 @@ CMSIS-DSP integration:
         - stephanosio
     collaborators:
         - galak
-        - ioannisg
     files:
         - modules/Kconfig.cmsis_dsp
         - tests/benchmarks/cmsis_dsp/
@@ -435,6 +442,7 @@ Documentation:
         - lyakh
         - lgirdwood
         - mengxianglinx
+        - marc-hb
     files:
         - drivers/audio/
         - include/audio/
@@ -463,7 +471,9 @@ Documentation:
         - samples/drivers/can/
         - tests/drivers/can/
         - samples/subsys/canbus/
-        - doc/reference/networking/can_api.rst
+        - doc/reference/canbus/
+        - modules/canopennode/
+        - samples/modules/canopennode/
     labels:
         - "area: CAN"
 
@@ -843,6 +853,7 @@ Documentation:
     collaborators:
         - avisconti
         - gmarull
+        - teburd
     files:
         - drivers/sensor/
         - include/drivers/sensor.h
@@ -890,6 +901,7 @@ Documentation:
     status: orphaned
     collaborators:
         - katsuster
+        - martinjaeger
     files:
         - doc/reference/peripherals/watchdog.rst
         - drivers/watchdog/
@@ -1042,7 +1054,6 @@ MAINTAINERS file:
     maintainers:
         - MaureenHelm
     collaborators:
-        - ioannisg
         - nashif
     files:
         - MAINTAINERS.yml
@@ -1068,6 +1079,8 @@ MCU Manager:
     status: maintained
     maintainers:
         - de-nordic
+    collaborators:
+        - lairdjm
     files:
         - subsys/mgmt/mcumgr/
         - include/mgmt/mcumgr/
@@ -1254,6 +1267,7 @@ Power management:
         - nashif
         - mengxianglinx
         - gmarull
+        - teburd
     files:
         - include/pm/pm.h
         - samples/subsys/pm/
@@ -1347,6 +1361,40 @@ SPARC arch:
     labels:
         - "area: SPARC"
 
+State machine framework:
+    status: maintained
+    maintainers:
+        - sambhurst
+    collaborators:
+        - keith-zephyr
+    files:
+        - doc/guides/smf/
+        - include/smf.h
+        - lib/smf/
+        - tests/lib/smf/
+    labels:
+        - "area: State Machine Framework"
+
+GD32 Platforms:
+    status: maintained
+    maintainers:
+        - nandojve
+        - gmarull
+    files:
+        - boards/arm/gd32*/
+        - drivers/*/*gd32*/
+        - drivers/*/*gd32*
+        - dts/arm/gigadevice/
+        - dts/bindings/*/*gd32*
+        - modules/hal_gigadevice/
+        - soc/arm/gigadevice/
+        - scripts/west_commands/*/*gd32*
+    labels:
+        - "platform: GD32"
+    description: >-
+        GigaDevice GD32 SOCs, dts files and related drivers. Starter and eval
+        boards.
+
 Synopsys Platforms:
     status: maintained
     maintainers:
@@ -1418,6 +1466,7 @@ Intel Platforms (X86):
     collaborators:
         - jhedberg
         - aasthagr
+        - laurenmurphyx64
     files:
         - boards/x86/
         - soc/x86/
@@ -1444,6 +1493,7 @@ NXP Platforms:
     - dleach02
   collaborators:
     - mmahadevan108
+    - danieldegrasse
   files:
     - boards/arm/mimx*/
     - boards/arm/frdm_k*/
@@ -1476,7 +1526,7 @@ Microchip Platforms:
 nRF Platforms:
     status: maintained
     maintainers:
-        - ioannisg
+        - anangl
     files:
         - boards/arm/*nrf*/
         - drivers/*/*nrfx*.c
@@ -1517,7 +1567,7 @@ Espressif Platforms:
     maintainers:
         - sylvioalves
         - glaubermaroto
-        - ulipe
+        - uLipe
     files:
         - drivers/*/*esp32*.c
         - boards/xtensa/esp32*/
@@ -1548,7 +1598,8 @@ ITE Platforms:
         - sjg20
     files:
         - boards/riscv/it8xxx2_evb/
-        - drivers/*/*it8xxx2*
+        - drivers/*/*/*it8xxx2*.c
+        - drivers/*/*it8xxx2*.c
         - dts/bindings/*/*ite*
         - dts/riscv/*it8xxx2*
         - soc/riscv/riscv-ite/
@@ -1566,12 +1617,23 @@ Storage:
     labels:
         - "area: Storage"
 
+Task Watchdog:
+    status: maintained
+    maintainers:
+        - martinjaeger
+    files:
+        - include/task_wdt/
+        - samples/subsys/task_wdt/
+        - subsys/task_wdt/
+    labels:
+        - "area: Task Watchdog"
+
 TF-M Integration:
     status: maintained
     maintainers:
         - microbuilder
     collaborators:
-        - ioannisg
+        - SebastianBoe
     files:
         - samples/tfm_integration/
         - modules/trusted-firmware-m/
@@ -1582,6 +1644,9 @@ Tracing:
     status: maintained
     maintainers:
         - nashif
+    collaborators:
+        - teburd
+        - tleksell-pe
     files:
         - subsys/tracing/
         - include/tracing/
@@ -1612,7 +1677,6 @@ Userspace:
     maintainers:
         - dcpleung
     collaborators:
-        - ioannisg
         - enjiamai
     files:
         - doc/reference/usermode/kernelobjects.rst
@@ -1684,6 +1748,7 @@ x86 arch:
         - ceolin
         - enjiamai
         - aasthagr
+        - laurenmurphyx64
     files:
         - arch/x86/
         - include/arch/x86/
@@ -1712,6 +1777,8 @@ ZTest:
     status: maintained
     maintainers:
         - nashif
+    collaborators:
+        - jeremybettis
     files:
         - subsys/testsuite/
         - tests/ztest/
