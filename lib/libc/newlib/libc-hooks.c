@@ -13,6 +13,7 @@
 #include <linker/linker-defs.h>
 #include <sys/util.h>
 #include <sys/errno_private.h>
+#include <sys/heap_listener.h>
 #include <sys/libc-hooks.h>
 #include <syscall_handler.h>
 #include <app_memory/app_memdomain.h>
@@ -129,20 +130,6 @@ static int malloc_prepare(const struct device *unused)
 		 "memory space available for newlib heap is less than the "
 		 "minimum required size specified by "
 		 "CONFIG_NEWLIB_LIBC_MIN_REQUIRED_HEAP_SIZE");
-
-#ifdef CONFIG_XTENSA
-	/*
-	 * FIXME: For Xtensa, the first `malloc` call may fail if the HEAP_BASE
-	 *        is such that the first `sbrk` call returns a 4096-byte
-	 *        aligned address.
-	 *
-	 *        This is a very ugly workaround for the issue #38258 and must
-	 *        be removed once it is fixed.
-	 */
-	void *ptr = malloc(16);
-
-	free(ptr);
-#endif /* CONFIG_XTENSA */
 
 	return 0;
 }
@@ -305,6 +292,10 @@ void *_sbrk(intptr_t count)
 	if ((heap_sz + count) < MAX_HEAP_SIZE) {
 		heap_sz += count;
 		ret = ptr;
+
+#ifdef CONFIG_NEWLIB_LIBC_HEAP_LISTENER
+		heap_listener_notify_resize(HEAP_ID_LIBC, ptr, (char *)ptr + count);
+#endif
 	} else {
 		ret = (void *)-1;
 	}

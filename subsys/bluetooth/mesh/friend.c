@@ -50,7 +50,7 @@ struct friend_pdu_info {
 };
 
 NET_BUF_POOL_FIXED_DEFINE(friend_buf_pool, FRIEND_BUF_COUNT,
-			  BT_MESH_ADV_DATA_SIZE, NULL);
+			  BT_MESH_ADV_DATA_SIZE, 8, NULL);
 
 static struct friend_adv {
 	uint16_t app_idx;
@@ -461,14 +461,14 @@ static int unseg_app_sdu_prepare(struct bt_mesh_friend *frnd,
 }
 
 static int encrypt_friend_pdu(struct bt_mesh_friend *frnd, struct net_buf *buf,
-			      bool master_cred)
+			      bool flooding_cred)
 {
 	const struct bt_mesh_net_cred *cred;
 	uint32_t iv_index;
 	uint16_t src;
 	int err;
 
-	if (master_cred) {
+	if (flooding_cred) {
 		cred = &frnd->subnet->keys[SUBNET_KEY_TX_IDX(frnd->subnet)]
 				.msg;
 	} else {
@@ -1261,7 +1261,8 @@ static void friend_timeout(struct k_work *work)
 	frnd->queue_size--;
 
 send_last:
-	buf = bt_mesh_adv_create(BT_MESH_ADV_DATA, FRIEND_XMIT, K_NO_WAIT);
+	buf = bt_mesh_adv_create(BT_MESH_ADV_DATA, BT_MESH_LOCAL_ADV,
+				 FRIEND_XMIT, K_NO_WAIT);
 	if (!buf) {
 		BT_ERR("Unable to allocate friend adv buffer");
 		return;

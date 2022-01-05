@@ -130,15 +130,22 @@ enum socket_state {
 	SOCK_CONNECTED,
 };
 
+enum hl7800_lpm {
+	HL7800_LPM_NONE,
+	HL7800_LPM_EDRX,
+	HL7800_LPM_PSM,
+};
+
 struct mdm_control_pinconfig {
 	char *dev_name;
 	gpio_pin_t pin;
 	gpio_flags_t config;
+	gpio_flags_t irq_config;
 };
 
-#define PINCONFIG(name_, pin_, config_)                                        \
-	{                                                                      \
-		.dev_name = name_, .pin = pin_, .config = config_              \
+#define PINCONFIG(name_, pin_, config_, irq_config_)                                               \
+	{                                                                                          \
+		.dev_name = name_, .pin = pin_, .config = config_, .irq_config = irq_config_       \
 	}
 
 /* pin settings */
@@ -147,7 +154,6 @@ enum mdm_control_pins {
 	MDM_WAKE,
 	MDM_PWR_ON,
 	MDM_FAST_SHUTD,
-	MDM_UART_DTR,
 	MDM_VGPIO,
 	MDM_UART_DSR,
 	MDM_UART_CTS,
@@ -188,48 +194,37 @@ struct xmodem_packet {
 
 static const struct mdm_control_pinconfig pinconfig[] = {
 	/* MDM_RESET */
-	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_reset_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_reset_gpios),
-		  (GPIO_OUTPUT | GPIO_OPEN_DRAIN)),
+	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_reset_gpios), DT_INST_GPIO_PIN(0, mdm_reset_gpios),
+		  (GPIO_OUTPUT | GPIO_OPEN_DRAIN), 0),
 
 	/* MDM_WAKE */
-	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_wake_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_wake_gpios),
-		  (GPIO_OUTPUT | GPIO_OPEN_SOURCE)),
+	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_wake_gpios), DT_INST_GPIO_PIN(0, mdm_wake_gpios),
+		  (GPIO_OUTPUT | GPIO_OPEN_SOURCE), 0),
 
 	/* MDM_PWR_ON */
-	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_pwr_on_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_pwr_on_gpios),
-		  (GPIO_OUTPUT | GPIO_OPEN_DRAIN)),
+	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_pwr_on_gpios), DT_INST_GPIO_PIN(0, mdm_pwr_on_gpios),
+		  (GPIO_OUTPUT | GPIO_OPEN_DRAIN), 0),
 
 	/* MDM_FAST_SHUTD */
 	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_fast_shutd_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_fast_shutd_gpios),
-		  (GPIO_OUTPUT | GPIO_OPEN_DRAIN)),
-
-	/* MDM_UART_DTR */
-	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_uart_dtr_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_uart_dtr_gpios), GPIO_OUTPUT),
+		  DT_INST_GPIO_PIN(0, mdm_fast_shutd_gpios), (GPIO_OUTPUT | GPIO_OPEN_DRAIN),
+		  0),
 
 	/* MDM_VGPIO */
-	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_vgpio_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_vgpio_gpios),
-		  (GPIO_INPUT | GPIO_INT_EDGE_BOTH)),
+	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_vgpio_gpios), DT_INST_GPIO_PIN(0, mdm_vgpio_gpios),
+		  GPIO_INPUT, GPIO_INT_EDGE_BOTH),
 
 	/* MDM_UART_DSR */
 	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_uart_dsr_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_uart_dsr_gpios),
-		  (GPIO_INPUT | GPIO_INT_EDGE_BOTH)),
+		  DT_INST_GPIO_PIN(0, mdm_uart_dsr_gpios), GPIO_INPUT, GPIO_INT_EDGE_BOTH),
 
 	/* MDM_UART_CTS */
 	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_uart_cts_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_uart_cts_gpios),
-		  (GPIO_INPUT | GPIO_INT_EDGE_BOTH)),
+		  DT_INST_GPIO_PIN(0, mdm_uart_cts_gpios), GPIO_INPUT, GPIO_INT_EDGE_BOTH),
 
 	/* MDM_GPIO6 */
-	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_gpio6_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_gpio6_gpios),
-		  (GPIO_INPUT | GPIO_INT_EDGE_BOTH)),
+	PINCONFIG(DT_INST_GPIO_LABEL(0, mdm_gpio6_gpios), DT_INST_GPIO_PIN(0, mdm_gpio6_gpios),
+		  GPIO_INPUT, GPIO_INT_EDGE_BOTH),
 };
 
 #define MDM_UART_DEV	DEVICE_DT_GET(DT_INST_BUS(0))
@@ -242,8 +237,6 @@ static const struct mdm_control_pinconfig pinconfig[] = {
 #define MDM_PWR_ON_NOT_ASSERTED 1
 #define MDM_FAST_SHUTD_ASSERTED 0
 #define MDM_FAST_SHUTD_NOT_ASSERTED 1
-#define MDM_UART_DTR_ASSERTED 0 /* Asserted keeps the module awake */
-#define MDM_UART_DTR_NOT_ASSERTED 1
 
 #define MDM_SEND_OK_ENABLED 0
 #define MDM_SEND_OK_DISABLED 1
@@ -312,7 +305,17 @@ static const struct mdm_control_pinconfig pinconfig[] = {
 #define PROFILE_LINE_2                                                         \
 	"S00:255 S01:255 S03:255 S04:255 S05:255 S07:255 S08:255 S10:255\r\n"
 
-#define SETUP_GPRS_CONNECTION_CMD "AT+KCNXCFG=1,\"GPRS\",\"\",,,\"IPV4V6\""
+#define ADDRESS_FAMILY_IPV4 "IPV4"
+#if defined(CONFIG_MODEM_HL7800_ADDRESS_FAMILY_IPV4V6)
+#define MODEM_HL7800_ADDRESS_FAMILY "IPV4V6"
+#elif defined(CONFIG_MODEM_HL7800_ADDRESS_FAMILY_IPV4)
+#define MODEM_HL7800_ADDRESS_FAMILY ADDRESS_FAMILY_IPV4
+#else
+#define MODEM_HL7800_ADDRESS_FAMILY "IPV6"
+#endif
+#define MDM_HL7800_SOCKET_AF_IPV4 0
+#define MDM_HL7800_SOCKET_AF_IPV6 1
+
 #define SET_RAT_M1_CMD_LEGACY "AT+KSRAT=0"
 #define SET_RAT_NB1_CMD_LEGACY "AT+KSRAT=1"
 #define SET_RAT_M1_CMD "AT+KSRAT=0,1"
@@ -323,7 +326,12 @@ static const struct mdm_control_pinconfig pinconfig[] = {
 #define MAX_PROFILE_LINE_LENGTH                                                \
 	MAX(sizeof(PROFILE_LINE_1), sizeof(PROFILE_LINE_2))
 
-#ifdef CONFIG_NEWLIB_LIBC
+#define IPV6_ADDR_FORMAT "####:####:####:####:####:####:####:####"
+#define HL7800_IPV6_ADDR_LEN                                                                       \
+	sizeof("a01.a02.a03.a04.a05.a06.a07.a08.a09.a10.a11.a12.a13.a14.a15.a16")
+
+#define MDM_ADDR_FAM_MAX_LEN sizeof("IPV4V6")
+
 /* The ? can be a + or - */
 static const char TIME_STRING_FORMAT[] = "\"yy/MM/dd,hh:mm:ss?zz\"";
 #define TIME_STRING_DIGIT_STRLEN 2
@@ -342,7 +350,6 @@ static const char TIME_STRING_FORMAT[] = "\"yy/MM/dd,hh:mm:ss?zz\"";
 #define TM_SEC_RANGE 0, 60 /* leap second */
 #define QUARTER_HOUR_RANGE 0, 96
 #define SECONDS_PER_QUARTER_HOUR (15 * 60)
-#endif
 
 #define SEND_AT_CMD_ONCE_EXPECT_OK(c)                                          \
 	do {                                                                   \
@@ -440,13 +447,17 @@ struct hl7800_socket {
 struct hl7800_iface_ctx {
 	struct net_if *iface;
 	uint8_t mac_addr[6];
-	struct in_addr ipv4Addr, subnet, gateway, dns;
+	struct in_addr ipv4Addr, subnet, gateway, dns_v4;
+#ifdef CONFIG_NET_IPV6
+	struct in6_addr ipv6Addr, dns_v6;
+	char dns_v6_string[HL7800_IPV6_ADDR_LEN];
+#endif
 	bool restarting;
 	bool initialized;
 	bool wait_for_KSUP;
 	uint32_t wait_for_KSUP_tries;
 	bool reconfig_IP_connection;
-	char dns_string[NET_IPV4_ADDR_LEN];
+	char dns_v4_string[NET_IPV4_ADDR_LEN];
 	char no_id_resp_cmd[NO_ID_RESP_CMD_MAX_LENGTH];
 	bool search_no_id_resp;
 
@@ -506,6 +517,7 @@ struct hl7800_iface_ctx {
 	char mdm_active_bands_string[MDM_HL7800_LTE_BAND_STR_SIZE];
 	char mdm_bands_string[MDM_HL7800_LTE_BAND_STR_SIZE];
 	char mdm_imsi[MDM_HL7800_IMSI_MAX_STR_SIZE];
+	int mdm_rssi;
 	uint16_t mdm_bands_top;
 	uint32_t mdm_bands_middle;
 	uint32_t mdm_bands_bottom;
@@ -517,18 +529,18 @@ struct hl7800_iface_ctx {
 	bool new_rat_cmd_support;
 	uint8_t operator_index;
 	enum mdm_hl7800_functionality functionality;
+	char mdm_pdp_addr_fam[MDM_ADDR_FAM_MAX_LEN];
 
 	/* modem state */
 	bool allow_sleep;
 	bool uart_on;
 	enum mdm_hl7800_sleep_state sleep_state;
+	enum hl7800_lpm low_power_mode;
 	enum mdm_hl7800_network_state network_state;
 	enum net_operator_status operator_status;
 	void (*event_callback)(enum mdm_hl7800_event event, void *event_data);
-#ifdef CONFIG_NEWLIB_LIBC
 	struct tm local_time;
 	int32_t local_time_offset;
-#endif
 	bool local_time_valid;
 	bool configured;
 
@@ -572,10 +584,8 @@ static void generate_fota_state_event(void);
 static void generate_fota_count_event(void);
 #endif
 
-#ifdef CONFIG_NEWLIB_LIBC
 static bool convert_time_string_to_struct(struct tm *tm, int32_t *offset,
 					  char *time_string);
-#endif
 
 #ifdef CONFIG_MODEM_HL7800_LOW_POWER_MODE
 static bool is_cmd_ready(void)
@@ -812,28 +822,12 @@ static void modem_assert_fast_shutd(bool assert)
 	}
 }
 
-static void modem_assert_uart_dtr(bool assert)
-{
-	if (assert) {
-		HL7800_IO_DBG_LOG("MDM_UART_DTR -> ASSERTED");
-		gpio_pin_set(ictx.gpio_port_dev[MDM_UART_DTR],
-			     pinconfig[MDM_UART_DTR].pin,
-			     MDM_UART_DTR_ASSERTED);
-	} else {
-		HL7800_IO_DBG_LOG("MDM_UART_DTR -> NOT_ASSERTED");
-		gpio_pin_set(ictx.gpio_port_dev[MDM_UART_DTR],
-			     pinconfig[MDM_UART_DTR].pin,
-			     MDM_UART_DTR_NOT_ASSERTED);
-	}
-}
-
 static void allow_sleep_work_callback(struct k_work *item)
 {
 	ARG_UNUSED(item);
 	LOG_DBG("Allow sleep");
 	ictx.allow_sleep = true;
 	modem_assert_wake(false);
-	modem_assert_uart_dtr(false);
 }
 
 static void allow_sleep(bool allow)
@@ -848,7 +842,6 @@ static void allow_sleep(bool allow)
 		k_work_cancel_delayable(&ictx.allow_sleep_work);
 		ictx.allow_sleep = false;
 		modem_assert_wake(true);
-		modem_assert_uart_dtr(true);
 	}
 #endif
 }
@@ -862,7 +855,7 @@ static void event_handler(enum mdm_hl7800_event event, void *event_data)
 
 void mdm_hl7800_get_signal_quality(int *rsrp, int *sinr)
 {
-	*rsrp = ictx.mdm_ctx.data_rssi;
+	*rsrp = ictx.mdm_rssi;
 	*sinr = ictx.mdm_sinr;
 }
 
@@ -1040,7 +1033,6 @@ error:
 	return ret;
 }
 
-#ifdef CONFIG_NEWLIB_LIBC
 int32_t mdm_hl7800_get_local_time(struct tm *tm, int32_t *offset)
 {
 	int ret;
@@ -1061,7 +1053,6 @@ int32_t mdm_hl7800_get_local_time(struct tm *tm, int32_t *offset)
 	hl7800_unlock();
 	return ret;
 }
-#endif
 
 int32_t mdm_hl7800_get_operator_index(void)
 {
@@ -1245,7 +1236,7 @@ void mdm_hl7800_generate_status_events(void)
 #ifdef CONFIG_MODEM_HL7800_FW_UPDATE
 	generate_fota_state_event();
 #endif
-	event_handler(HL7800_EVENT_RSSI, &ictx.mdm_ctx.data_rssi);
+	event_handler(HL7800_EVENT_RSSI, &ictx.mdm_rssi);
 	event_handler(HL7800_EVENT_SINR, &ictx.mdm_sinr);
 	event_handler(HL7800_EVENT_APN_UPDATE, &ictx.mdm_apn);
 	event_handler(HL7800_EVENT_RAT, &ictx.mdm_rat);
@@ -1259,9 +1250,9 @@ static int send_data(struct hl7800_socket *sock, struct net_pkt *pkt)
 {
 	int ret;
 	struct net_buf *frag;
-	char dst_addr[sizeof("###.###.###.###")];
+	char dst_addr[NET_IPV6_ADDR_LEN];
+	char buf[sizeof("AT+KUDPSND=##,\"" IPV6_ADDR_FORMAT "\",#####,####")];
 	size_t send_len, actual_send_len;
-	char buf[sizeof("AT+KUDPSND=##,\"###.###.###.###\",#####,####")];
 
 	send_len = 0, actual_send_len = 0;
 
@@ -1724,16 +1715,22 @@ static void dns_work_cb(struct k_work *work)
 #if defined(CONFIG_DNS_RESOLVER) && !defined(CONFIG_DNS_SERVER_IP_ADDRESSES)
 	int ret;
 	struct dns_resolve_context *dnsCtx;
-	static const char * const dns_servers_str[] = { ictx.dns_string, NULL };
+	static const char *const dns_servers_str[] = { ictx.dns_v4_string,
+#ifdef CONFIG_NET_IPV6
+						       ictx.dns_v6_string,
+#endif
+						       NULL };
 
-	/* set new DNS addr in DNS resolver */
-	LOG_DBG("Refresh DNS resolver");
-	dnsCtx = dns_resolve_get_default();
+	if (ictx.iface && net_if_is_up(ictx.iface)) {
+		/* set new DNS addr in DNS resolver */
+		LOG_DBG("Refresh DNS resolver");
+		dnsCtx = dns_resolve_get_default();
 
-	ret = dns_resolve_reconfigure(dnsCtx, dns_servers_str, NULL);
-	if (ret < 0) {
-		LOG_ERR("dns_resolve_init fail (%d)", ret);
-		return;
+		ret = dns_resolve_reconfigure(dnsCtx, (const char **)dns_servers_str, NULL);
+		if (ret < 0) {
+			LOG_ERR("dns_resolve_init fail (%d)", ret);
+			return;
+		}
 	}
 #endif
 }
@@ -1763,6 +1760,50 @@ char *mdm_hl7800_get_imsi(void)
 	return ictx.mdm_imsi;
 }
 
+/* Convert HL7800 IPv6 address string in format
+ * a01.a02.a03.a04.a05.a06.a07.a08.a09.a10.a11.a12.a13.a14.a15.a16 to
+ * an IPv6 address.
+ */
+static int hl7800_net_addr6_pton(const char *src, struct in6_addr *dst)
+{
+	int num_sections = 8;
+	int i, len;
+	uint16_t ipv6_section;
+
+	len = strlen(src);
+	for (i = 0; i < len; i++) {
+		if (!(src[i] >= '0' && src[i] <= '9') && src[i] != '.') {
+			return -EINVAL;
+		}
+	}
+
+	for (i = 0; i < num_sections; i++) {
+		if (!src || *src == '\0') {
+			return -EINVAL;
+		}
+
+		ipv6_section = (uint16_t)strtol(src, NULL, 10);
+		src = strchr(src, '.');
+		src++;
+		if (!src || *src == '\0') {
+			return -EINVAL;
+		}
+		ipv6_section = (ipv6_section << 8) | (uint16_t)strtol(src, NULL, 10);
+		UNALIGNED_PUT(htons(ipv6_section), &dst->s6_addr16[i]);
+
+		src = strchr(src, '.');
+		if (src) {
+			src++;
+		} else {
+			if (i < num_sections - 1) {
+				return -EINVAL;
+			}
+		}
+	}
+
+	return 0;
+}
+
 /* Handler: +CGCONTRDP: <cid>,<bearer_id>,<apn>,<local_addr and subnet_mask>,
  *			<gw_addr>,<DNS_prim_addr>,<DNS_sec_addr>
  */
@@ -1773,16 +1814,12 @@ static bool on_cmd_atcmdinfo_ipaddr(struct net_buf **buf, uint16_t len)
 	char *delims[CGCONTRDP_RESPONSE_NUM_DELIMS];
 	size_t out_len;
 	char value[MDM_IP_INFO_RESP_SIZE];
-	char *search_start, *addr_start, *sm_start, *gw_start, *dns_start;
+	char *search_start, *addr_start, *sm_start;
 	struct in_addr new_ipv4_addr;
+	struct in6_addr new_ipv6_addr;
 	bool is_ipv4;
-	int ipv4_len;
-	char ipv4_addr_str[NET_IPV4_ADDR_LEN];
-	int sn_len;
-	char sm_str[NET_IPV4_ADDR_LEN];
-	int gw_len;
-	char gw_str[NET_IPV4_ADDR_LEN];
-	int dns_len;
+	int addr_len;
+	char temp_addr_str[HL7800_IPV6_ADDR_LEN];
 	k_timeout_t delay;
 
 	out_len = net_buf_linearize(value, sizeof(value), *buf, 0, len);
@@ -1806,19 +1843,19 @@ static bool on_cmd_atcmdinfo_ipaddr(struct net_buf **buf, uint16_t len)
 	 * gateway string.
 	 */
 	is_ipv4 = false;
-	ipv4_len = delims[3] - delims[2];
-	LOG_DBG("IP string len: %d", ipv4_len);
-	if (ipv4_len <= (NET_IPV4_ADDR_LEN * 2)) {
+	addr_len = delims[3] - delims[2];
+	LOG_DBG("IP string len: %d", addr_len);
+	if (addr_len <= (NET_IPV4_ADDR_LEN * 2)) {
 		is_ipv4 = true;
-	}
-
-	if (!is_ipv4) {
-		goto done;
 	}
 
 	/* Find start of subnet mask */
 	addr_start = delims[2] + 1;
-	num_delims = 4;
+	if (is_ipv4) {
+		num_delims = 4;
+	} else {
+		num_delims = 16;
+	}
 	search_start = addr_start;
 	for (int i = 0; i < num_delims; i++) {
 		sm_start = strchr(search_start, '.');
@@ -1830,67 +1867,97 @@ static bool on_cmd_atcmdinfo_ipaddr(struct net_buf **buf, uint16_t len)
 		search_start = sm_start + 1;
 	}
 
-	/* get new IPv4 addr */
-	ipv4_len = sm_start - addr_start;
-	strncpy(ipv4_addr_str, addr_start, ipv4_len);
-	ipv4_addr_str[ipv4_len] = 0;
-	ret = net_addr_pton(AF_INET, ipv4_addr_str, &new_ipv4_addr);
+	/* get new IP addr */
+	addr_len = sm_start - addr_start;
+	strncpy(temp_addr_str, addr_start, addr_len);
+	temp_addr_str[addr_len] = 0;
+	LOG_DBG("IP addr: %s", log_strdup(temp_addr_str));
+	if (is_ipv4) {
+		ret = net_addr_pton(AF_INET, temp_addr_str, &new_ipv4_addr);
+	} else {
+		ret = hl7800_net_addr6_pton(temp_addr_str, &new_ipv6_addr);
+	}
 	if (ret < 0) {
-		LOG_ERR("Invalid IPv4 addr");
+		LOG_ERR("Invalid IP addr");
 		return true;
 	}
 
-	/* move past the '.' */
-	sm_start += 1;
-	/* store new subnet mask */
-	sn_len = delims[3] - sm_start;
-	strncpy(sm_str, sm_start, sn_len);
-	sm_str[sn_len] = 0;
-	ret = net_addr_pton(AF_INET, sm_str, &ictx.subnet);
-	if (ret < 0) {
-		LOG_ERR("Invalid subnet");
-		return true;
-	}
+	if (is_ipv4) {
+		/* move past the '.' */
+		sm_start += 1;
+		/* store new subnet mask */
+		addr_len = delims[3] - sm_start;
+		strncpy(temp_addr_str, sm_start, addr_len);
+		temp_addr_str[addr_len] = 0;
+		ret = net_addr_pton(AF_INET, temp_addr_str, &ictx.subnet);
+		if (ret < 0) {
+			LOG_ERR("Invalid subnet");
+			return true;
+		}
 
-	/* store new gateway */
-	gw_start = delims[3] + 1;
-	gw_len = delims[4] - gw_start;
-	strncpy(gw_str, gw_start, gw_len);
-	gw_str[gw_len] = 0;
-	ret = net_addr_pton(AF_INET, gw_str, &ictx.gateway);
-	if (ret < 0) {
-		LOG_ERR("Invalid gateway");
-		return true;
+		/* store new gateway */
+		addr_start = delims[3] + 1;
+		addr_len = delims[4] - addr_start;
+		strncpy(temp_addr_str, addr_start, addr_len);
+		temp_addr_str[addr_len] = 0;
+		ret = net_addr_pton(AF_INET, temp_addr_str, &ictx.gateway);
+		if (ret < 0) {
+			LOG_ERR("Invalid gateway");
+			return true;
+		}
 	}
 
 	/* store new dns */
-	dns_start = delims[4] + 1;
-	dns_len = delims[5] - dns_start;
-	strncpy(ictx.dns_string, dns_start, dns_len);
-	ictx.dns_string[dns_len] = 0;
-	ret = net_addr_pton(AF_INET, ictx.dns_string, &ictx.dns);
+	addr_start = delims[4] + 1;
+	addr_len = delims[5] - addr_start;
+	if (is_ipv4) {
+		strncpy(ictx.dns_v4_string, addr_start, addr_len);
+		ictx.dns_v4_string[addr_len] = 0;
+		ret = net_addr_pton(AF_INET, ictx.dns_v4_string, &ictx.dns_v4);
+		LOG_DBG("IPv4 DNS addr: %s", log_strdup(ictx.dns_v4_string));
+	}
+#ifdef CONFIG_NET_IPV6
+	else {
+		/* store HL7800 formatted IPv6 DNS string temporarily */
+		strncpy(ictx.dns_v6_string, addr_start, addr_len);
+
+		ret = hl7800_net_addr6_pton(ictx.dns_v6_string, &ictx.dns_v6);
+		net_addr_ntop(AF_INET6, &ictx.dns_v6, ictx.dns_v6_string,
+			      sizeof(ictx.dns_v6_string));
+		LOG_DBG("IPv6 DNS addr: %s", log_strdup(ictx.dns_v6_string));
+	}
+#endif
 	if (ret < 0) {
 		LOG_ERR("Invalid dns");
 		return true;
 	}
 
 	if (ictx.iface) {
-		/* remove the current IPv4 addr before adding a new one.
-		 * We dont care if it is successful or not.
-		 */
-		net_if_ipv4_addr_rm(ictx.iface, &ictx.ipv4Addr);
+		if (is_ipv4) {
+#ifdef CONFIG_NET_IPV4
+			/* remove the current IPv4 addr before adding a new one.
+			 * We dont care if it is successful or not.
+			 */
+			net_if_ipv4_addr_rm(ictx.iface, &ictx.ipv4Addr);
 
-		if (!net_if_ipv4_addr_add(ictx.iface, &new_ipv4_addr,
-					  NET_ADDR_DHCP, 0)) {
-			LOG_ERR("Cannot set iface IPv4 addr");
-			return true;
+			if (!net_if_ipv4_addr_add(ictx.iface, &new_ipv4_addr, NET_ADDR_DHCP, 0)) {
+				LOG_ERR("Cannot set iface IPv4 addr");
+			}
+
+			net_if_ipv4_set_netmask(ictx.iface, &ictx.subnet);
+			net_if_ipv4_set_gw(ictx.iface, &ictx.gateway);
+#endif
+			/* store the new IP addr */
+			net_ipaddr_copy(&ictx.ipv4Addr, &new_ipv4_addr);
+		} else {
+#if CONFIG_NET_IPV6
+			net_if_ipv6_addr_rm(ictx.iface, &ictx.ipv6Addr);
+			if (!net_if_ipv6_addr_add(ictx.iface, &new_ipv6_addr, NET_ADDR_AUTOCONF,
+						  0)) {
+				LOG_ERR("Cannot set iface IPv6 addr");
+			}
+#endif
 		}
-
-		net_if_ipv4_set_netmask(ictx.iface, &ictx.subnet);
-		net_if_ipv4_set_gw(ictx.iface, &ictx.gateway);
-
-		/* store the new IP addr */
-		net_ipaddr_copy(&ictx.ipv4Addr, &new_ipv4_addr);
 
 		/* start DNS update work */
 		delay = K_NO_WAIT;
@@ -1906,8 +1973,6 @@ static bool on_cmd_atcmdinfo_ipaddr(struct net_buf **buf, uint16_t len)
 		LOG_ERR("iface NULL");
 	}
 
-	/* TODO: IPv6 addr present, configure iface with it */
-done:
 	return true;
 }
 
@@ -2387,29 +2452,42 @@ static bool on_cmd_atcmdinfo_pdp_context(struct net_buf **buf, uint16_t len)
 						  *buf, 0, line_length);
 		LOG_DBG("length: %u: %s", line_length, log_strdup(line));
 		if (output_length > 0) {
-			memset(ictx.mdm_apn.value, 0,
-			       sizeof(ictx.mdm_apn.value));
+			memset(ictx.mdm_apn.value, 0, sizeof(ictx.mdm_apn.value));
+			memset(ictx.mdm_pdp_addr_fam, 0, MDM_ADDR_FAM_MAX_LEN);
 
-			/* The name is after the 3rd " */
-			p = strchr(line, '"');
+			/* Address family after first , */
+			p = strchr(line, ',');
 			if (p == NULL) {
 				LOG_WRN("Issue parsing APN response");
 				goto done;
 			}
-			p = strchr(p + 1, '"');
+			p += 2;
+			i = 0;
+			while ((p != NULL) && (*p != '"') && (i < MDM_ADDR_FAM_MAX_LEN)) {
+				ictx.mdm_pdp_addr_fam[i++] = *p++;
+			}
+			LOG_DBG("PDP address family: %s", log_strdup(ictx.mdm_pdp_addr_fam));
+
+			/* APN after second , " */
+			p = strchr(p, ',');
 			if (p == NULL) {
 				LOG_WRN("Issue parsing APN response");
 				goto done;
 			}
-			p = strchr(p + 1, '"');
-			if (p != NULL) {
-				p += 1;
+			p++;
+			if (*p == ',') {
+				/* APN is blank */
+				goto done;
+			}
+			if (*p == '"') {
+				p++;
 				i = 0;
 				while ((p != NULL) && (*p != '"') &&
 				       (i < MDM_HL7800_APN_MAX_STRLEN)) {
 					ictx.mdm_apn.value[i++] = *p++;
 				}
 			}
+
 			LOG_INF("APN: %s", log_strdup(ictx.mdm_apn.value));
 		}
 	}
@@ -2925,14 +3003,17 @@ static void iface_status_work_cb(struct k_work *work)
 		break;
 	case HL7800_OUT_OF_COVERAGE:
 	default:
-		if (ictx.iface && net_if_is_up(ictx.iface)) {
+		if (ictx.iface && net_if_is_up(ictx.iface) &&
+		    (ictx.low_power_mode != HL7800_LPM_PSM)) {
 			LOG_DBG("HL7800 iface DOWN");
 			net_if_down(ictx.iface);
 		}
 		break;
 	}
 
-	if (ictx.iface && !net_if_is_up(ictx.iface)) {
+	if ((ictx.iface && !net_if_is_up(ictx.iface)) ||
+	    (ictx.low_power_mode == HL7800_LPM_PSM &&
+	     ictx.network_state == HL7800_OUT_OF_COVERAGE)) {
 		hl7800_stop_rssi_work();
 		notify_all_tcp_sockets_closed();
 	} else if (ictx.iface && net_if_is_up(ictx.iface)) {
@@ -3129,7 +3210,6 @@ done:
 	return true;
 }
 
-#ifdef CONFIG_NEWLIB_LIBC
 /* Handler: +CCLK: "yy/MM/dd,hh:mm:ss±zz" */
 static bool on_cmd_rtc_query(struct net_buf **buf, uint16_t len)
 {
@@ -3149,7 +3229,7 @@ static bool on_cmd_rtc_query(struct net_buf **buf, uint16_t len)
 		goto done;
 	}
 	if (len != str_len) {
-		LOG_WRN("Unexpected length for RTC string %d (expected:%d)",
+		LOG_WRN("Unexpected length for RTC string %d (expected:%zu)",
 			len, str_len);
 	} else {
 		net_buf_linearize(rtc_string, str_len, *buf, 0, str_len);
@@ -3232,7 +3312,6 @@ static bool convert_time_string_to_struct(struct tm *tm, int32_t *offset,
 	}
 	return (fc == 0);
 }
-#endif
 
 /* Handler: +CEREG: <stat>[,[<lac>],[<ci>],[<AcT>]
  *  [,[<cause_type>],[<reject_cause>] [,[<Active-Time>],[<Periodic-TAU>]]]]
@@ -3297,7 +3376,7 @@ static bool on_cmd_atcmdinfo_rssi(struct net_buf **buf, uint16_t len)
 		search_start = delims[i] + 1;
 	}
 	/* the first value in the message is the RSRP */
-	ictx.mdm_ctx.data_rssi = strtol(value, NULL, 10);
+	ictx.mdm_rssi = strtol(value, NULL, 10);
 	/* the 4th ',' (last in the msg) is the start of the SINR */
 	ictx.mdm_sinr = strtol(delims[3] + 1, NULL, 10);
 	if ((delims[1] - delims[0]) == 1) {
@@ -3306,9 +3385,9 @@ static bool on_cmd_atcmdinfo_rssi(struct net_buf **buf, uint16_t len)
 		 */
 		LOG_INF("RSSI (RSRP): UNKNOWN");
 	} else {
-		LOG_INF("RSSI (RSRP): %d SINR: %d", ictx.mdm_ctx.data_rssi,
+		LOG_INF("RSSI (RSRP): %d SINR: %d", ictx.mdm_rssi,
 			ictx.mdm_sinr);
-		event_handler(HL7800_EVENT_RSSI, &ictx.mdm_ctx.data_rssi);
+		event_handler(HL7800_EVENT_RSSI, &ictx.mdm_rssi);
 		event_handler(HL7800_EVENT_SINR, &ictx.mdm_sinr);
 	}
 done:
@@ -3540,7 +3619,8 @@ static void sockreadrecv_cb_work(struct k_work *work)
 
 	sock = CONTAINER_OF(work, struct hl7800_socket, recv_cb_work);
 
-	LOG_DBG("Sock %d RX CB", sock->socket_id);
+	LOG_DBG("Sock %d RX CB (size: %zd)", sock->socket_id,
+		(sock->recv_pkt != NULL) ? net_pkt_get_len(sock->recv_pkt) : 0);
 	/* return data */
 	pkt = sock->recv_pkt;
 	sock->recv_pkt = NULL;
@@ -4097,9 +4177,7 @@ static void hl7800_rx(void)
 		CMD_HANDLER("AT+CIMI", atcmdinfo_imsi),
 		CMD_HANDLER("+CFUN: ", modem_functionality),
 		CMD_HANDLER("%MEAS: ", survey_status),
-#ifdef CONFIG_NEWLIB_LIBC
 		CMD_HANDLER("+CCLK: ", rtc_query),
-#endif
 
 		/* UNSOLICITED modem information */
 		/* mobile startup report */
@@ -4286,8 +4364,8 @@ static void shutdown_uart(void)
 	if (ictx.uart_on) {
 		HL7800_IO_DBG_LOG("Power OFF the UART");
 		uart_irq_rx_disable(ictx.mdm_ctx.uart_dev);
-		rc = pm_device_state_set(ictx.mdm_ctx.uart_dev,
-					 PM_DEVICE_STATE_SUSPENDED);
+		rc = pm_device_action_run(ictx.mdm_ctx.uart_dev,
+					 PM_DEVICE_ACTION_SUSPEND);
 		if (rc) {
 			LOG_ERR("Error disabling UART peripheral (%d)", rc);
 		}
@@ -4303,8 +4381,8 @@ static void power_on_uart(void)
 
 	if (!ictx.uart_on) {
 		HL7800_IO_DBG_LOG("Power ON the UART");
-		rc = pm_device_state_set(ictx.mdm_ctx.uart_dev,
-					 PM_DEVICE_STATE_ACTIVE);
+		rc = pm_device_action_run(ictx.mdm_ctx.uart_dev,
+					 PM_DEVICE_ACTION_RESUME);
 		if (rc) {
 			LOG_ERR("Error enabling UART peripheral (%d)", rc);
 		}
@@ -4319,7 +4397,6 @@ static void prepare_io_for_reset(void)
 {
 	HL7800_IO_DBG_LOG("Preparing IO for reset/sleep");
 	shutdown_uart();
-	modem_assert_uart_dtr(true);
 	modem_assert_wake(false);
 	modem_assert_pwr_on(false);
 	modem_assert_fast_shutd(false);
@@ -4336,8 +4413,8 @@ static void mdm_vgpio_work_cb(struct k_work *item)
 		if (ictx.sleep_state != HL7800_SLEEP_STATE_ASLEEP) {
 			set_sleep_state(HL7800_SLEEP_STATE_ASLEEP);
 		}
-		if (ictx.iface && ictx.initialized &&
-		    net_if_is_up(ictx.iface)) {
+		if (ictx.iface && ictx.initialized && net_if_is_up(ictx.iface) &&
+		    ictx.low_power_mode != HL7800_LPM_PSM) {
 			net_if_down(ictx.iface);
 		}
 	}
@@ -4564,6 +4641,21 @@ static int compare_versions(char *v1, const char *v2)
 	return result;
 }
 
+static int setup_gprs_connection(char *access_point_name)
+{
+	char cmd_string[sizeof("AT+KCNXCFG=1,\"GPRS\",\"\",,,"
+			       "\"IPV4V6\"") +
+			MDM_HL7800_APN_MAX_SIZE];
+	int cmd_max_len = sizeof(cmd_string) - 1;
+
+	memset(cmd_string, 0, cmd_max_len);
+	strncat(cmd_string, "AT+KCNXCFG=1,\"GPRS\",\"", cmd_max_len);
+	strncat(cmd_string, access_point_name, cmd_max_len);
+	strncat(cmd_string, "\",,,\"", cmd_max_len);
+	strncat(cmd_string, MODEM_HL7800_ADDRESS_FAMILY "\"", cmd_max_len);
+	return send_at_cmd(NULL, cmd_string, MDM_CMD_SEND_TIMEOUT, 0, false);
+}
+
 static int modem_reset_and_configure(void)
 {
 	int ret = 0;
@@ -4761,20 +4853,22 @@ reboot:
 	}
 #endif
 
+	ictx.low_power_mode = HL7800_LPM_NONE;
 #ifdef CONFIG_MODEM_HL7800_LOW_POWER_MODE
-
 	/* enable GPIO6 low power monitoring */
 	SEND_AT_CMD_EXPECT_OK("AT+KHWIOCFG=3,1,6");
 
 	/* Turn on sleep mode */
-	SEND_AT_CMD_EXPECT_OK("AT+KSLEEP=0,2,10");
+	SEND_AT_CMD_EXPECT_OK("AT+KSLEEP=1,2,10");
 
 #if CONFIG_MODEM_HL7800_PSM
+	ictx.low_power_mode = HL7800_LPM_PSM;
 	/* Turn off eDRX */
 	SEND_AT_CMD_EXPECT_OK("AT+CEDRXS=0");
 
 	SEND_AT_CMD_EXPECT_OK(TURN_ON_PSM);
 #elif CONFIG_MODEM_HL7800_EDRX
+	ictx.low_power_mode = HL7800_LPM_EDRX;
 	/* Turn off PSM */
 	SEND_AT_CMD_EXPECT_OK("AT+CPSMS=0");
 
@@ -4819,13 +4913,20 @@ reboot:
 	(void)send_at_cmd(NULL, "AT+CIMI", MDM_CMD_SEND_TIMEOUT,
 			  MDM_DEFAULT_AT_CMD_RETRIES, true);
 
-	/* An empty string is used here so that it doesn't conflict
-	 * with the APN used in the +CGDCONT command.
-	 */
-	SEND_AT_CMD_EXPECT_OK(SETUP_GPRS_CONNECTION_CMD);
-
 	/* Query PDP context to get APN */
 	SEND_AT_CMD_EXPECT_OK("AT+CGDCONT?");
+	if (strcmp(ictx.mdm_pdp_addr_fam, MODEM_HL7800_ADDRESS_FAMILY)) {
+		/* set PDP context address family along with current APN */
+		ret = write_apn(ictx.mdm_apn.value);
+		if (ret < 0) {
+			goto error;
+		}
+	}
+
+	ret = setup_gprs_connection(ictx.mdm_apn.value);
+	if (ret < 0) {
+		goto error;
+	}
 
 	/* Query PDP authentication context to get APN username/password.
 	 * Temporary Workaroud - Ignore error
@@ -4893,8 +4994,12 @@ static int write_apn(char *access_point_name)
 
 	/* PDP Context */
 	memset(cmd_string, 0, MDM_HL7800_APN_CMD_MAX_SIZE);
-	strncat(cmd_string, "AT+CGDCONT=1,\"IPV4V6\",\"",
-		MDM_HL7800_APN_CMD_MAX_STRLEN);
+	if (strcmp(MODEM_HL7800_ADDRESS_FAMILY, ADDRESS_FAMILY_IPV4)) {
+		strncat(cmd_string, "AT+CGDCONT=1,\"" MODEM_HL7800_ADDRESS_FAMILY "\",\"",
+			MDM_HL7800_APN_CMD_MAX_STRLEN);
+	} else {
+		strncat(cmd_string, "AT+CGDCONT=1,\"IP\",\"", MDM_HL7800_APN_CMD_MAX_STRLEN);
+	}
 	strncat(cmd_string, access_point_name, MDM_HL7800_APN_CMD_MAX_STRLEN);
 	strncat(cmd_string, "\"", MDM_HL7800_APN_CMD_MAX_STRLEN);
 	return send_at_cmd(NULL, cmd_string, MDM_CMD_SEND_TIMEOUT, 0, false);
@@ -5000,28 +5105,25 @@ done:
 static int configure_TCP_socket(struct hl7800_socket *sock)
 {
 	int ret;
-	char cmd_cfg[sizeof("AT+KTCPCFG=#,#,\"###.###.###.###\",#####")];
+	char cmd_cfg[sizeof("AT+KTCPCFG=#,#,\"" IPV6_ADDR_FORMAT "\",#####")];
 	int dst_port = -1;
+	int af;
 
-#if defined(CONFIG_NET_IPV6)
 	if (sock->dst.sa_family == AF_INET6) {
+		af = MDM_HL7800_SOCKET_AF_IPV6;
 		dst_port = net_sin6(&sock->dst)->sin6_port;
-	} else
-#endif
-#if defined(CONFIG_NET_IPV4)
-		if (sock->dst.sa_family == AF_INET) {
+	} else if (sock->dst.sa_family == AF_INET) {
+		af = MDM_HL7800_SOCKET_AF_IPV4;
 		dst_port = net_sin(&sock->dst)->sin_port;
-	} else
-#endif
-	{
+	} else {
 		return -EINVAL;
 	}
 
 	/* socket # needs assigning */
 	sock->socket_id = MDM_MAX_SOCKETS + 1;
 
-	snprintk(cmd_cfg, sizeof(cmd_cfg), "AT+KTCPCFG=%d,%d,\"%s\",%u", 1, 0,
-		 hl7800_sprint_ip_addr(&sock->dst), dst_port);
+	snprintk(cmd_cfg, sizeof(cmd_cfg), "AT+KTCPCFG=%d,%d,\"%s\",%u,,,,%d", 1, 0,
+		 hl7800_sprint_ip_addr(&sock->dst), dst_port, af);
 	ret = send_at_cmd(sock, cmd_cfg, MDM_CMD_SEND_TIMEOUT, 0, false);
 	if (ret < 0) {
 		LOG_ERR("AT+KTCPCFG ret:%d", ret);
@@ -5044,12 +5146,22 @@ done:
 static int configure_UDP_socket(struct hl7800_socket *sock)
 {
 	int ret = 0;
+	char cmd[sizeof("AT+KUDPCFG=1,0,,,,,0")];
+	int af;
 
 	/* socket # needs assigning */
 	sock->socket_id = MDM_MAX_SOCKETS + 1;
 
-	ret = send_at_cmd(sock, "AT+KUDPCFG=1,0", MDM_CMD_SEND_TIMEOUT, 0,
-			  false);
+	if (sock->family == AF_INET) {
+		af = MDM_HL7800_SOCKET_AF_IPV4;
+	} else if (sock->family == AF_INET6) {
+		af = MDM_HL7800_SOCKET_AF_IPV6;
+	} else {
+		return -EINVAL;
+	}
+
+	snprintk(cmd, sizeof(cmd), "AT+KUDPCFG=1,0,,,,,%d", af);
+	ret = send_at_cmd(sock, cmd, MDM_CMD_SEND_TIMEOUT, 0, false);
 	if (ret < 0) {
 		LOG_ERR("AT+KUDPCFG ret:%d", ret);
 		goto done;
@@ -5111,8 +5223,7 @@ static int reconfigure_IP_connection(void)
 		ictx.reconfig_IP_connection = false;
 
 		/* reconfigure GPRS connection so sockets can be used */
-		ret = send_at_cmd(NULL, SETUP_GPRS_CONNECTION_CMD,
-				  MDM_CMD_SEND_TIMEOUT, 0, false);
+		ret = setup_gprs_connection(ictx.mdm_apn.value);
 		if (ret < 0) {
 			LOG_ERR("AT+KCNXCFG= ret:%d", ret);
 			goto done;
@@ -5634,11 +5745,11 @@ static int hl7800_init(const struct device *dev)
 			return -ENODEV;
 		}
 
-		ret = gpio_pin_configure(ictx.gpio_port_dev[i],
-					 pinconfig[i].pin, pinconfig[i].config);
+		ret = gpio_pin_configure(ictx.gpio_port_dev[i], pinconfig[i].pin,
+					 pinconfig[i].config);
 		if (ret) {
-			LOG_ERR("Error configuring io %s %d err: %d!",
-				pinconfig[i].dev_name, pinconfig[i].pin, ret);
+			LOG_ERR("Error configuring IO %s %d err: %d!", pinconfig[i].dev_name,
+				pinconfig[i].pin, ret);
 			return ret;
 		}
 	}
@@ -5647,7 +5758,6 @@ static int hl7800_init(const struct device *dev)
 	ictx.uart_on = true;
 
 	modem_assert_wake(false);
-	modem_assert_uart_dtr(false);
 	modem_assert_pwr_on(false);
 	modem_assert_fast_shutd(false);
 
@@ -5669,7 +5779,7 @@ static int hl7800_init(const struct device *dev)
 	}
 	ret = gpio_pin_interrupt_configure(ictx.gpio_port_dev[MDM_VGPIO],
 					   pinconfig[MDM_VGPIO].pin,
-					   pinconfig[MDM_VGPIO].config);
+					   pinconfig[MDM_VGPIO].irq_config);
 	if (ret) {
 		LOG_ERR("Error config vgpio interrupt! (%d)", ret);
 		return ret;
@@ -5686,7 +5796,7 @@ static int hl7800_init(const struct device *dev)
 	}
 	ret = gpio_pin_interrupt_configure(ictx.gpio_port_dev[MDM_UART_DSR],
 					   pinconfig[MDM_UART_DSR].pin,
-					   pinconfig[MDM_UART_DSR].config);
+					   pinconfig[MDM_UART_DSR].irq_config);
 	if (ret) {
 		LOG_ERR("Error config uart dsr interrupt! (%d)", ret);
 		return ret;
@@ -5703,7 +5813,7 @@ static int hl7800_init(const struct device *dev)
 	}
 	ret = gpio_pin_interrupt_configure(ictx.gpio_port_dev[MDM_GPIO6],
 					   pinconfig[MDM_GPIO6].pin,
-					   pinconfig[MDM_GPIO6].config);
+					   pinconfig[MDM_GPIO6].irq_config);
 	if (ret) {
 		LOG_ERR("Error config gpio6 interrupt! (%d)", ret);
 		return ret;
@@ -5720,7 +5830,7 @@ static int hl7800_init(const struct device *dev)
 	}
 	ret = gpio_pin_interrupt_configure(ictx.gpio_port_dev[MDM_UART_CTS],
 					   pinconfig[MDM_UART_CTS].pin,
-					   pinconfig[MDM_UART_CTS].config);
+					   pinconfig[MDM_UART_CTS].irq_config);
 	if (ret) {
 		LOG_ERR("Error config uart cts interrupt! (%d)", ret);
 		return ret;
@@ -5733,6 +5843,7 @@ static int hl7800_init(const struct device *dev)
 #ifdef CONFIG_MODEM_SIM_NUMBERS
 	ictx.mdm_ctx.data_imei = ictx.mdm_imei;
 #endif
+	ictx.mdm_ctx.data_rssi = &ictx.mdm_rssi;
 
 	ret = mdm_receiver_register(&ictx.mdm_ctx, MDM_UART_DEV,
 				    mdm_recv_buf, sizeof(mdm_recv_buf));

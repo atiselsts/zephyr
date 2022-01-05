@@ -27,6 +27,11 @@ config MODEM_GSM_SIMCOM
 	help
 	  Use this if you have SIMCOM based modem like SIM800 etc.
 
+config MODEM_GSM_QUECTEL
+	bool "Quectel modem"
+	help
+	  Use this if you have Quectel based modem like EC2X etc.
+
 endchoice
 
 config MODEM_GSM_RX_STACK_SIZE
@@ -34,6 +39,13 @@ config MODEM_GSM_RX_STACK_SIZE
 	default 512
 	help
 	  Sets the stack size which will be used by the GSM RX thread.
+
+config MODEM_GSM_WORKQ_STACK_SIZE
+	int "Size of the stack allocated for the dedicated gsm workqueue"
+	default 768
+	help
+	  Sets the stack size which will be used by the dedicated GSM workqueue
+	  thread.
 
 config MODEM_GSM_INIT_PRIORITY
 	int "Init priority for the GSM modem driver"
